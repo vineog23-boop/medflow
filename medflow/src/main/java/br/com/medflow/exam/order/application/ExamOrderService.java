@@ -6,6 +6,8 @@ import br.com.medflow.exam.order.application.dto.request.UpdateExamRequestDto;
 import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundException;
 import br.com.medflow.exam.order.domain.ExamOrder;
 import br.com.medflow.exam.order.persistence.ExamOrderRepository;
+import br.com.medflow.patient.application.exception.PatientNotFoundException;
+import br.com.medflow.patient.persistence.PatientRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,12 +18,18 @@ import java.util.UUID;
 public class ExamOrderService {
 
     private final ExamOrderRepository examOrderRepository;
+    private final PatientRepository patientRepository;
 
-    public ExamOrderService(ExamOrderRepository examOrderRepository) {
+    public ExamOrderService(ExamOrderRepository examOrderRepository, PatientRepository patientRepository) {
         this.examOrderRepository = examOrderRepository;
+        this.patientRepository = patientRepository;
     }
 
     public ExamOrderResponseDto create(CreateExamRequestDto request) {
+        if (!patientRepository.existsById(request.patientId())) {
+            throw new PatientNotFoundException(request.patientId());
+        }
+
         ExamOrder examOrder = new ExamOrder(
                 request.patientId(),
                 request.examCode(),

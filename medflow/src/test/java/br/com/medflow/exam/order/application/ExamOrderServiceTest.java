@@ -7,6 +7,8 @@ import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundExceptio
 import br.com.medflow.exam.order.domain.ExamOrder;
 import br.com.medflow.exam.order.domain.enums.ExamPriority;
 import br.com.medflow.exam.order.persistence.ExamOrderRepository;
+import br.com.medflow.patient.application.exception.PatientNotFoundException;
+import br.com.medflow.patient.persistence.PatientRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -27,11 +29,13 @@ import static org.mockito.Mockito.when;
 class ExamOrderServiceTest {
 
     private final ExamOrderRepository repository = mock(ExamOrderRepository.class);
-    private final ExamOrderService service = new ExamOrderService(repository);
+    private final PatientRepository patientRepository = mock(PatientRepository.class);
+    private final ExamOrderService service = new ExamOrderService(repository, patientRepository);
 
     @Test
     void deveCriarOrdemESalvarNoRepository() {
         UUID patientId = UUID.randomUUID();
+        when(patientRepository.existsById(patientId)).thenReturn(true);
         when(repository.save(any(ExamOrder.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -42,6 +46,22 @@ class ExamOrderServiceTest {
         assertThat(result.patientId()).isEqualTo(patientId);
         assertThat(result.examCode()).isEqualTo("HEMOGRAMA");
         verify(repository).save(any(ExamOrder.class));
+    }
+
+    @Test
+    void naoDeveCriarOrdemQuandoPacienteNaoExistir() {
+        UUID patientId = UUID.randomUUID();
+        CreateExamRequestDto request = new CreateExamRequestDto(
+                patientId,
+                "HEMOGRAMA",
+                ExamPriority.NORMAL
+        );
+        when(patientRepository.existsById(patientId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(PatientNotFoundException.class);
+
+        verify(repository, never()).save(any(ExamOrder.class));
     }
 
     @Test

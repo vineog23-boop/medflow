@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -129,6 +130,14 @@ class ExamDefinitionControllerTest {
                 .andExpect(jsonPath("$.name").value("Hemograma completo"));
 
         verify(examDefinitionService).update(ID, request);
+    }
+
+    @Test
+    void deveDesativarDefinicao() throws Exception {
+        mockMvc.perform(patch("/exam-definitions/{id}/deactivation", ID))
+                .andExpect(status().isNoContent());
+
+        verify(examDefinitionService).deactivate(ID);
     }
 
     @Test
