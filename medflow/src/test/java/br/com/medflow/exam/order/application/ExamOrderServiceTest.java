@@ -3,6 +3,11 @@ package br.com.medflow.exam.order.application;
 import br.com.medflow.exam.order.application.dto.request.CreateExamRequestDto;
 import br.com.medflow.exam.order.application.dto.response.ExamOrderResponseDto;
 import br.com.medflow.exam.order.application.dto.request.UpdateExamRequestDto;
+import br.com.medflow.exam.definition.application.exception.ExamDefinitionNotFoundException;
+import br.com.medflow.exam.definition.application.exception.ExamDefinitionInactiveException;
+import br.com.medflow.exam.definition.domain.ExamDefinition;
+import br.com.medflow.exam.definition.domain.enums.SampleType;
+import br.com.medflow.exam.definition.persistence.ExamDefinitionRepository;
 import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundException;
 import br.com.medflow.exam.order.domain.ExamOrder;
 import br.com.medflow.exam.order.domain.enums.ExamPriority;
@@ -30,16 +35,28 @@ class ExamOrderServiceTest {
 
     private final ExamOrderRepository repository = mock(ExamOrderRepository.class);
     private final PatientRepository patientRepository = mock(PatientRepository.class);
-    private final ExamOrderService service = new ExamOrderService(repository, patientRepository);
+    private final ExamDefinitionRepository examDefinitionRepository = mock(ExamDefinitionRepository.class);
+    private final ExamOrderService service = new ExamOrderService(
+            repository,
+            patientRepository,
+            examDefinitionRepository
+    );
 
     @Test
     void deveCriarOrdemESalvarNoRepository() {
         UUID patientId = UUID.randomUUID();
+        ExamDefinition definition = criarDefinicao();
         when(patientRepository.existsById(patientId)).thenReturn(true);
+        when(examDefinitionRepository.findByCodeIgnoreCase("hemograma"))
+                .thenReturn(Optional.of(definition));
         when(repository.save(any(ExamOrder.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        CreateExamRequestDto request = new CreateExamRequestDto(patientId, "HEMOGRAMA", ExamPriority.NORMAL);
+        CreateExamRequestDto request = new CreateExamRequestDto(
+                patientId,
+                " hemograma ",
+                ExamPriority.NORMAL
+        );
 
         ExamOrderResponseDto result = service.create(request);
 
@@ -60,6 +77,44 @@ class ExamOrderServiceTest {
 
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(PatientNotFoundException.class);
+
+        verify(repository, never()).save(any(ExamOrder.class));
+    }
+
+    @Test
+    void naoDeveCriarOrdemQuandoDefinicaoNaoExistir() {
+        UUID patientId = UUID.randomUUID();
+        CreateExamRequestDto request = new CreateExamRequestDto(
+                patientId,
+                "INEXISTENTE",
+                ExamPriority.NORMAL
+        );
+        when(patientRepository.existsById(patientId)).thenReturn(true);
+        when(examDefinitionRepository.findByCodeIgnoreCase("INEXISTENTE"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(ExamDefinitionNotFoundException.class);
+
+        verify(repository, never()).save(any(ExamOrder.class));
+    }
+
+    @Test
+    void naoDeveCriarOrdemQuandoDefinicaoEstiverInativa() {
+        UUID patientId = UUID.randomUUID();
+        ExamDefinition definition = criarDefinicao();
+        definition.deactivate();
+        CreateExamRequestDto request = new CreateExamRequestDto(
+                patientId,
+                "HEMOGRAMA",
+                ExamPriority.NORMAL
+        );
+        when(patientRepository.existsById(patientId)).thenReturn(true);
+        when(examDefinitionRepository.findByCodeIgnoreCase("HEMOGRAMA"))
+                .thenReturn(Optional.of(definition));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(ExamDefinitionInactiveException.class);
 
         verify(repository, never()).save(any(ExamOrder.class));
     }
@@ -108,8 +163,15 @@ class ExamOrderServiceTest {
         UUID id = UUID.randomUUID();
         UUID patientId = UUID.randomUUID();
         ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "GLICOSE", ExamPriority.NORMAL);
-        UpdateExamRequestDto request = new UpdateExamRequestDto(patientId, "HEMOGRAMA", ExamPriority.URGENT);
+        UpdateExamRequestDto request = new UpdateExamRequestDto(
+                patientId,
+                " hemograma ",
+                ExamPriority.URGENT
+        );
         when(repository.findById(id)).thenReturn(Optional.of(examOrder));
+        when(patientRepository.existsById(patientId)).thenReturn(true);
+        when(examDefinitionRepository.findByCodeIgnoreCase("hemograma"))
+                .thenReturn(Optional.of(criarDefinicao()));
         when(repository.save(examOrder)).thenReturn(examOrder);
 
         ExamOrderResponseDto result = service.update(id, request);
@@ -118,6 +180,69 @@ class ExamOrderServiceTest {
         assertThat(result.examCode()).isEqualTo("HEMOGRAMA");
         assertThat(result.priority()).isEqualTo(ExamPriority.URGENT);
         verify(repository).save(examOrder);
+    }
+
+    @Test
+    void naoDeveAtualizarOrdemQuandoPacienteNaoExistir() {
+        UUID id = UUID.randomUUID();
+        UUID patientId = UUID.randomUUID();
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "GLICOSE", ExamPriority.NORMAL);
+        UpdateExamRequestDto request = new UpdateExamRequestDto(
+                patientId,
+                "HEMOGRAMA",
+                ExamPriority.NORMAL
+        );
+        when(repository.findById(id)).thenReturn(Optional.of(examOrder));
+        when(patientRepository.existsById(patientId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.update(id, request))
+                .isInstanceOf(PatientNotFoundException.class);
+
+        verify(repository, never()).save(any(ExamOrder.class));
+    }
+
+    @Test
+    void naoDeveAtualizarOrdemQuandoDefinicaoNaoExistir() {
+        UUID id = UUID.randomUUID();
+        UUID patientId = UUID.randomUUID();
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "GLICOSE", ExamPriority.NORMAL);
+        UpdateExamRequestDto request = new UpdateExamRequestDto(
+                patientId,
+                "INEXISTENTE",
+                ExamPriority.NORMAL
+        );
+        when(repository.findById(id)).thenReturn(Optional.of(examOrder));
+        when(patientRepository.existsById(patientId)).thenReturn(true);
+        when(examDefinitionRepository.findByCodeIgnoreCase("INEXISTENTE"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.update(id, request))
+                .isInstanceOf(ExamDefinitionNotFoundException.class);
+
+        verify(repository, never()).save(any(ExamOrder.class));
+    }
+
+    @Test
+    void naoDeveAtualizarOrdemQuandoDefinicaoEstiverInativa() {
+        UUID id = UUID.randomUUID();
+        UUID patientId = UUID.randomUUID();
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "GLICOSE", ExamPriority.NORMAL);
+        ExamDefinition definition = criarDefinicao();
+        definition.deactivate();
+        UpdateExamRequestDto request = new UpdateExamRequestDto(
+                patientId,
+                "HEMOGRAMA",
+                ExamPriority.NORMAL
+        );
+        when(repository.findById(id)).thenReturn(Optional.of(examOrder));
+        when(patientRepository.existsById(patientId)).thenReturn(true);
+        when(examDefinitionRepository.findByCodeIgnoreCase("HEMOGRAMA"))
+                .thenReturn(Optional.of(definition));
+
+        assertThatThrownBy(() -> service.update(id, request))
+                .isInstanceOf(ExamDefinitionInactiveException.class);
+
+        verify(repository, never()).save(any(ExamOrder.class));
     }
 
     @Test
@@ -153,5 +278,13 @@ class ExamOrderServiceTest {
                 .isInstanceOf(ExamOrderNotFoundException.class);
 
         verify(repository, never()).delete(any(ExamOrder.class));
+    }
+
+    private ExamDefinition criarDefinicao() {
+        return new ExamDefinition(
+                "HEMOGRAMA",
+                "Hemograma completo",
+                SampleType.BLOOD
+        );
     }
 }
