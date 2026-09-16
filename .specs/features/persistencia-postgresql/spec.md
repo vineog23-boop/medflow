@@ -74,7 +74,7 @@ Como desenvolvedor, quero documentação coerente para executar e entender os te
 
 | Requirement | Story | Status |
 | --- | --- | --- |
-| MEDP-01 | Criar ordem somente com referências válidas | Implementing |
-| MEDP-02 | Expor falhas previsíveis no contrato HTTP | Pending |
-| MEDP-03 | Persistir em PostgreSQL com schema versionado | Pending |
-| MEDP-04 | Documentar o estado executável | Pending |
+| MEDP-01 | Criar ordem somente com referências válidas | Verified |
+| MEDP-02 | Expor falhas previsíveis no contrato HTTP | Verified |
+| MEDP-03 | Persistir em PostgreSQL com schema versionado | Verified |
+| MEDP-04 | Documentar o estado executável | Verified |

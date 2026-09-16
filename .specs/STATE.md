@@ -21,10 +21,11 @@
 ## Handoff
 
 - **Feature**: `.specs/features/persistencia-postgresql`
-- **Phase / Task**: validação independente
+- **Phase / Task**: concluída e validada
 - **Completed**: T1, T2, T3, T4, T5
 - **In-progress** (file:line): none
-- **Next step**: executar verificação independente, registrar evidências e gerar o PDF didático.
+- **Next step**: executar o fluxo manual no Postman com apoio guiado.
 - **Blockers**: none
-- **Uncommitted files**: código anterior da ordem de exame e arquivos de saída já existentes.
+- **Validation**: PASS; 13/13 critérios, 92/92 testes e 3/3 mutações mortas.
+- **Uncommitted files**: arquivos de saída e scripts didáticos já existentes, preservados.
 - **Branch**: main
