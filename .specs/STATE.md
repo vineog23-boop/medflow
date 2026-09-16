@@ -21,10 +21,10 @@
 ## Handoff
 
 - **Feature**: `.specs/features/persistencia-postgresql`
-- **Phase / Task**: Phase 3 / T5
-- **Completed**: T1, T2, T3, T4
+- **Phase / Task**: validação independente
+- **Completed**: T1, T2, T3, T4, T5
 - **In-progress** (file:line): none
-- **Next step**: atualizar README, executar gate final e validar a feature.
+- **Next step**: executar verificação independente, registrar evidências e gerar o PDF didático.
 - **Blockers**: none
 - **Uncommitted files**: código anterior da ordem de exame e arquivos de saída já existentes.
 - **Branch**: main

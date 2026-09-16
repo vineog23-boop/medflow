@@ -86,4 +86,4 @@ T5
 - [x] T2 - Mapear exceções de definição. RED: 3 falhas por status 500; GREEN: 88 testes, 0 falhas.
 - [x] T3 - Adicionar suporte de teste com PostgreSQL descartável. Testcontainers 2.0.5 resolvido; 88 testes verdes.
 - [x] T4 - Versionar schema e provar integração. RED: 4 erros por tabelas ausentes; GREEN: 92 testes, 0 falhas.
-- [ ] T5 - Atualizar documentação operacional.
+- [x] T5 - Atualizar documentação operacional. Gate final: 92 testes, 0 falhas.
