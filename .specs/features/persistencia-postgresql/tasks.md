@@ -83,7 +83,7 @@ T5
 ## Task Breakdown
 
 - [x] T1 - Consolidar referências da ordem. Gate: 14 testes, 0 falhas.
-- [ ] T2 - Mapear exceções de definição.
+- [x] T2 - Mapear exceções de definição. RED: 3 falhas por status 500; GREEN: 88 testes, 0 falhas.
 - [ ] T3 - Adicionar suporte de teste com PostgreSQL descartável.
 - [ ] T4 - Versionar schema e provar integração.
 - [ ] T5 - Atualizar documentação operacional.

@@ -1,5 +1,8 @@
 package br.com.medflow.shared.web.error;
 
+import br.com.medflow.exam.definition.application.exception.ExamDefinitionCodeConflictException;
+import br.com.medflow.exam.definition.application.exception.ExamDefinitionInactiveException;
+import br.com.medflow.exam.definition.application.exception.ExamDefinitionNotFoundException;
 import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundException;
 import br.com.medflow.patient.application.dto.PatientDtoRequest;
 import br.com.medflow.patient.application.exception.PatientNotFoundException;
@@ -79,6 +82,51 @@ class GlobalExceptionHandlerTest {
                         "Ordem de exame não encontrada: " + ID))
                 .andExpect(jsonPath("$.instance").value(
                         "/test-errors/exam-orders/" + ID));
+    }
+
+    @Test
+    void shouldReturnProblemDetailWhenExamDefinitionDoesNotExist() throws Exception {
+        mockMvc.perform(get("/test-errors/exam-definitions/missing/{code}", "HEMOGRAMA"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type")
+                        .value("urn:medflow:problem:exam-definition-not-found"))
+                .andExpect(jsonPath("$.title").value("Definição de exame não encontrada"))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").value(
+                        "Definição de exame não encontrada: HEMOGRAMA"))
+                .andExpect(jsonPath("$.instance").value(
+                        "/test-errors/exam-definitions/missing/HEMOGRAMA"));
+    }
+
+    @Test
+    void shouldReturnProblemDetailWhenExamDefinitionCodeAlreadyExists() throws Exception {
+        mockMvc.perform(get("/test-errors/exam-definitions/conflict/{code}", "HEMOGRAMA"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type")
+                        .value("urn:medflow:problem:exam-definition-code-conflict"))
+                .andExpect(jsonPath("$.title").value("Código de exame já cadastrado"))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.detail").value(
+                        "Já existe uma definição de exame com o código: HEMOGRAMA"))
+                .andExpect(jsonPath("$.instance").value(
+                        "/test-errors/exam-definitions/conflict/HEMOGRAMA"));
+    }
+
+    @Test
+    void shouldReturnProblemDetailWhenExamDefinitionIsInactive() throws Exception {
+        mockMvc.perform(get("/test-errors/exam-definitions/inactive/{code}", "HEMOGRAMA"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type")
+                        .value("urn:medflow:problem:exam-definition-inactive"))
+                .andExpect(jsonPath("$.title").value("Definição de exame inativa"))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.detail").value(
+                        "Definição de exame inativa: HEMOGRAMA"))
+                .andExpect(jsonPath("$.instance").value(
+                        "/test-errors/exam-definitions/inactive/HEMOGRAMA"));
     }
 
     @Test
@@ -196,6 +244,21 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/exam-orders/{id}")
         void examOrderNotFound(@PathVariable UUID id) {
             throw new ExamOrderNotFoundException(id);
+        }
+
+        @GetMapping("/exam-definitions/missing/{code}")
+        void examDefinitionNotFound(@PathVariable String code) {
+            throw new ExamDefinitionNotFoundException(code);
+        }
+
+        @GetMapping("/exam-definitions/conflict/{code}")
+        void examDefinitionCodeConflict(@PathVariable String code) {
+            throw new ExamDefinitionCodeConflictException(code);
+        }
+
+        @GetMapping("/exam-definitions/inactive/{code}")
+        void examDefinitionInactive(@PathVariable String code) {
+            throw new ExamDefinitionInactiveException(code);
         }
 
         @PostMapping("/validation")

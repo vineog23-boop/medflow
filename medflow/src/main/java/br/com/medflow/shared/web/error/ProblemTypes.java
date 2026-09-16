@@ -14,6 +14,12 @@ public final class ProblemTypes {
             URI.create("urn:medflow:problem:patient-not-found");
     public static final URI EXAM_ORDER_NOT_FOUND =
             URI.create("urn:medflow:problem:exam-order-not-found");
+    public static final URI EXAM_DEFINITION_NOT_FOUND =
+            URI.create("urn:medflow:problem:exam-definition-not-found");
+    public static final URI EXAM_DEFINITION_CODE_CONFLICT =
+            URI.create("urn:medflow:problem:exam-definition-code-conflict");
+    public static final URI EXAM_DEFINITION_INACTIVE =
+            URI.create("urn:medflow:problem:exam-definition-inactive");
     public static final URI INVALID_REQUEST =
             URI.create("urn:medflow:problem:invalid-request");
     public static final URI VALIDATION_ERROR =

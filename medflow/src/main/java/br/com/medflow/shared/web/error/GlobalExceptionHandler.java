@@ -1,5 +1,8 @@
 package br.com.medflow.shared.web.error;
 
+import br.com.medflow.exam.definition.application.exception.ExamDefinitionCodeConflictException;
+import br.com.medflow.exam.definition.application.exception.ExamDefinitionInactiveException;
+import br.com.medflow.exam.definition.application.exception.ExamDefinitionNotFoundException;
 import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundException;
 import br.com.medflow.patient.application.exception.PatientNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -64,6 +67,45 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.NOT_FOUND,
                 ProblemTypes.EXAM_ORDER_NOT_FOUND,
                 "Ordem de exame não encontrada",
+                exception.getMessage(),
+                URI.create(request.getRequestURI())
+        );
+    }
+
+    @ExceptionHandler(ExamDefinitionNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleExamDefinitionNotFound(
+            ExamDefinitionNotFoundException exception,
+            HttpServletRequest request) {
+        return createResponse(
+                HttpStatus.NOT_FOUND,
+                ProblemTypes.EXAM_DEFINITION_NOT_FOUND,
+                "Definição de exame não encontrada",
+                exception.getMessage(),
+                URI.create(request.getRequestURI())
+        );
+    }
+
+    @ExceptionHandler(ExamDefinitionCodeConflictException.class)
+    public ResponseEntity<ProblemDetail> handleExamDefinitionCodeConflict(
+            ExamDefinitionCodeConflictException exception,
+            HttpServletRequest request) {
+        return createResponse(
+                HttpStatus.CONFLICT,
+                ProblemTypes.EXAM_DEFINITION_CODE_CONFLICT,
+                "Código de exame já cadastrado",
+                exception.getMessage(),
+                URI.create(request.getRequestURI())
+        );
+    }
+
+    @ExceptionHandler(ExamDefinitionInactiveException.class)
+    public ResponseEntity<ProblemDetail> handleExamDefinitionInactive(
+            ExamDefinitionInactiveException exception,
+            HttpServletRequest request) {
+        return createResponse(
+                HttpStatus.CONFLICT,
+                ProblemTypes.EXAM_DEFINITION_INACTIVE,
+                "Definição de exame inativa",
                 exception.getMessage(),
                 URI.create(request.getRequestURI())
         );

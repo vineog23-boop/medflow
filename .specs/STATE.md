@@ -21,10 +21,10 @@
 ## Handoff
 
 - **Feature**: `.specs/features/persistencia-postgresql`
-- **Phase / Task**: Phase 1 / T2
-- **Completed**: T1
+- **Phase / Task**: Phase 2 / T3
+- **Completed**: T1, T2
 - **In-progress** (file:line): none
-- **Next step**: escrever testes RED e mapear as exceções de definição no contrato HTTP.
+- **Next step**: adicionar dependências de teste do Testcontainers já autorizadas.
 - **Blockers**: Docker Desktop instalado, daemon ainda não iniciado.
 - **Uncommitted files**: código anterior da ordem de exame e arquivos de saída já existentes.
 - **Branch**: main
