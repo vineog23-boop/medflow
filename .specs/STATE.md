@@ -21,10 +21,10 @@
 ## Handoff
 
 - **Feature**: `.specs/features/persistencia-postgresql`
-- **Phase / Task**: Phase 2 / T3
-- **Completed**: T1, T2
+- **Phase / Task**: Phase 2 / T4
+- **Completed**: T1, T2, T3
 - **In-progress** (file:line): none
-- **Next step**: adicionar dependências de teste do Testcontainers já autorizadas.
+- **Next step**: iniciar Docker, escrever teste de integração RED e implementar migration/configuração.
 - **Blockers**: Docker Desktop instalado, daemon ainda não iniciado.
 - **Uncommitted files**: código anterior da ordem de exame e arquivos de saída já existentes.
 - **Branch**: main

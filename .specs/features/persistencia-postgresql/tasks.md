@@ -84,6 +84,6 @@ T5
 
 - [x] T1 - Consolidar referências da ordem. Gate: 14 testes, 0 falhas.
 - [x] T2 - Mapear exceções de definição. RED: 3 falhas por status 500; GREEN: 88 testes, 0 falhas.
-- [ ] T3 - Adicionar suporte de teste com PostgreSQL descartável.
+- [x] T3 - Adicionar suporte de teste com PostgreSQL descartável. Testcontainers 2.0.5 resolvido; 88 testes verdes.
 - [ ] T4 - Versionar schema e provar integração.
 - [ ] T5 - Atualizar documentação operacional.
