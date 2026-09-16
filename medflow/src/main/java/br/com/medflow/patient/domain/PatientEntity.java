@@ -33,7 +33,7 @@ public class PatientEntity {
 
     @NotBlank
     @CPF
-    @Column(name = "cpf", nullable = false)
+    @Column(name = "cpf", nullable = false, length = 14)
     private String cpf;
 
     @NotNull
@@ -50,6 +50,7 @@ public class PatientEntity {
     private Instant updatedAt;
 
     @Version
+    @Column(name = "version", nullable = false)
     private Long version;
 
     protected PatientEntity() {
