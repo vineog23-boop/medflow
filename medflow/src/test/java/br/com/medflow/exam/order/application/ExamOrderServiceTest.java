@@ -31,15 +31,26 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.medflow.messaging.outbox.domain.OutboxEvent;
+import br.com.medflow.messaging.outbox.domain.OutboxStatus;
+import br.com.medflow.messaging.outbox.persistence.OutboxEventRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.mockito.ArgumentCaptor;
+
 class ExamOrderServiceTest {
 
     private final ExamOrderRepository repository = mock(ExamOrderRepository.class);
     private final PatientRepository patientRepository = mock(PatientRepository.class);
     private final ExamDefinitionRepository examDefinitionRepository = mock(ExamDefinitionRepository.class);
+    private final OutboxEventRepository outboxEventRepository = mock(OutboxEventRepository.class);
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     private final ExamOrderService service = new ExamOrderService(
             repository,
             patientRepository,
-            examDefinitionRepository
+            examDefinitionRepository,
+            outboxEventRepository,
+            objectMapper
     );
 
     @Test
@@ -50,7 +61,11 @@ class ExamOrderServiceTest {
         when(examDefinitionRepository.findByCodeIgnoreCase("hemograma"))
                 .thenReturn(Optional.of(definition));
         when(repository.save(any(ExamOrder.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+                .thenAnswer(invocation -> {
+                    ExamOrder order = invocation.getArgument(0);
+                    org.springframework.test.util.ReflectionTestUtils.setField(order, "id", UUID.randomUUID());
+                    return order;
+                });
 
         CreateExamRequestDto request = new CreateExamRequestDto(
                 patientId,
@@ -63,6 +78,13 @@ class ExamOrderServiceTest {
         assertThat(result.patientId()).isEqualTo(patientId);
         assertThat(result.examCode()).isEqualTo("HEMOGRAMA");
         verify(repository).save(any(ExamOrder.class));
+
+        ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxEventRepository).save(outboxCaptor.capture());
+        OutboxEvent savedOutbox = outboxCaptor.getValue();
+        assertThat(savedOutbox.getAggregateType()).isEqualTo("EXAM_ORDER");
+        assertThat(savedOutbox.getStatus()).isEqualTo(OutboxStatus.PENDING);
+        assertThat(savedOutbox.getPayload()).contains("HEMOGRAMA");
     }
 
     @Test

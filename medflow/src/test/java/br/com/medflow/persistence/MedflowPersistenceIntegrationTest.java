@@ -64,8 +64,8 @@ class MedflowPersistenceIntegrationTest {
                 WHERE table_schema = 'public'
                 """, String.class);
 
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("1");
-        assertThat(tables).contains("patients", "exam_definitions", "exam_orders");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("3");
+        assertThat(tables).contains("patients", "exam_definitions", "exam_orders", "outbox_events", "processed_events");
     }
 
     @Test

@@ -23,6 +23,12 @@ class MedflowApplicationTests {
 	@MockitoBean
 	private PatientRepository patientRepository;
 
+	@MockitoBean
+	private br.com.medflow.messaging.outbox.persistence.OutboxEventRepository outboxEventRepository;
+
+	@MockitoBean
+	private br.com.medflow.messaging.consumer.persistence.ProcessedEventRepository processedEventRepository;
+
 	@Test
 	void contextLoads() {
 	}
