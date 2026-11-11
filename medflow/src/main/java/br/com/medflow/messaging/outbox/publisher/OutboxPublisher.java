@@ -5,6 +5,7 @@ import br.com.medflow.messaging.outbox.domain.OutboxStatus;
 import br.com.medflow.messaging.outbox.persistence.OutboxEventRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -35,15 +36,26 @@ public class OutboxPublisher {
 
     private final OutboxEventRepository repository;
     private final KafkaTemplate<String, String> kafkaTemplate;
-    private final String topic;
+    private final String examOrdersTopic;
+    private final String examNotificationsTopic;
 
     public OutboxPublisher(
             OutboxEventRepository repository,
             KafkaTemplate<String, String> kafkaTemplate,
-            @Value("${medflow.kafka.topic.exam-orders:exam-orders.v1}") String topic) {
+            String examOrdersTopic) {
+        this(repository, kafkaTemplate, examOrdersTopic, "exam-notifications.v1");
+    }
+
+    @Autowired
+    public OutboxPublisher(
+            OutboxEventRepository repository,
+            KafkaTemplate<String, String> kafkaTemplate,
+            @Value("${medflow.kafka.topic.exam-orders:exam-orders.v1}") String examOrdersTopic,
+            @Value("${medflow.kafka.topic.exam-notifications:exam-notifications.v1}") String examNotificationsTopic) {
         this.repository = repository;
         this.kafkaTemplate = kafkaTemplate;
-        this.topic = topic;
+        this.examOrdersTopic = examOrdersTopic;
+        this.examNotificationsTopic = examNotificationsTopic;
     }
 
     /**
@@ -68,24 +80,27 @@ public class OutboxPublisher {
 
         // 2. Itera sobre cada evento pendente para envio
         for (OutboxEvent event : pendingEvents) {
+            String targetTopic = resolveTopic(event);
             try {
-                // 3. Envia para o Kafka:
-                // - topic: "exam-orders.v1"
-                // - key: event.getAggregateId().toString() (o orderId do exame) -> Garante ordenação na partição!
-                // - payload: o JSON serializado com os dados do exame
-                kafkaTemplate.send(topic, event.getAggregateId().toString(), event.getPayload());
+                // key: event.getAggregateId().toString() (o orderId do exame) -> Garante ordenação na partição!
+                kafkaTemplate.send(targetTopic, event.getAggregateId().toString(), event.getPayload());
 
-                // 4. Marca o evento como publicado e salva o timestamp de envio
                 event.markPublished(Instant.now());
                 repository.save(event);
-                log.info("Evento outbox {} publicado com sucesso no Kafka (tópico: {})", event.getId(), topic);
+                log.info("Evento outbox {} publicado com sucesso no Kafka (tópico: {})", event.getId(), targetTopic);
 
             } catch (Exception e) {
-                // 5. Se o envio falhar (ex: rede offline), marca como FAILED para podermos monitorar
                 log.error("Falha ao publicar evento outbox {} no Kafka: {}", event.getId(), e.getMessage());
                 event.markFailed();
                 repository.save(event);
             }
         }
+    }
+
+    private String resolveTopic(OutboxEvent event) {
+        if ("ExamLaboratoryUpdatedEvent".equals(event.getEventType())) {
+            return examNotificationsTopic;
+        }
+        return examOrdersTopic;
     }
 }

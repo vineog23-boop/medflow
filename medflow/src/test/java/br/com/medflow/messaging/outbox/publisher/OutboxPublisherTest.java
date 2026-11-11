@@ -32,7 +32,7 @@ class OutboxPublisherTest {
     void setUp() {
         repository = mock(OutboxEventRepository.class);
         kafkaTemplate = (KafkaTemplate<String, String>) mock(KafkaTemplate.class);
-        publisher = new OutboxPublisher(repository, kafkaTemplate, "exam-orders.v1");
+        publisher = new OutboxPublisher(repository, kafkaTemplate, "exam-orders.v1", "exam-notifications.v1");
     }
 
     @Test
@@ -65,5 +65,34 @@ class OutboxPublisherTest {
         assertThat(pendingEvent.getStatus()).isEqualTo(OutboxStatus.PUBLISHED);
         assertThat(pendingEvent.getPublishedAt()).isNotNull();
         verify(repository).save(pendingEvent);
+    }
+
+    @Test
+    @DisplayName("Deve rotear eventos de atualização do laboratório para o tópico exam-notifications.v1")
+    void shouldRouteLaboratoryUpdatesToNotificationsTopic() {
+        UUID eventId = UUID.randomUUID();
+        UUID orderId = UUID.randomUUID();
+        String payload = "{\"orderId\":\"" + orderId + "\",\"status\":\"RELEASED\"}";
+
+        OutboxEvent labEvent = new OutboxEvent(
+                eventId,
+                "LABORATORY_UPDATE",
+                orderId,
+                "ExamLaboratoryUpdatedEvent",
+                payload
+        );
+
+        when(repository.findByStatusOrderByCreatedAtAsc(eq(OutboxStatus.PENDING), any(Pageable.class)))
+                .thenReturn(List.of(labEvent));
+
+        SendResult<String, String> sendResult = mock(SendResult.class);
+        when(kafkaTemplate.send(eq("exam-notifications.v1"), eq(orderId.toString()), eq(payload)))
+                .thenReturn(CompletableFuture.completedFuture(sendResult));
+
+        publisher.publishPendingEvents();
+
+        verify(kafkaTemplate).send("exam-notifications.v1", orderId.toString(), payload);
+        assertThat(labEvent.getStatus()).isEqualTo(OutboxStatus.PUBLISHED);
+        verify(repository).save(labEvent);
     }
 }
