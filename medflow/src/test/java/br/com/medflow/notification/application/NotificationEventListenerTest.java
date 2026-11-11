@@ -8,8 +8,6 @@ import br.com.medflow.notification.domain.Notification;
 import br.com.medflow.notification.persistence.NotificationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -25,22 +23,17 @@ import static org.mockito.Mockito.when;
 
 class NotificationEventListenerTest {
 
-    private NotificationRepository notificationRepository;
-    private ProcessedEventRepository processedEventRepository;
-    private ObjectMapper objectMapper;
-    private NotificationEventListener listener;
-
-    @BeforeEach
-    void setUp() {
-        notificationRepository = mock(NotificationRepository.class);
-        processedEventRepository = mock(ProcessedEventRepository.class);
-        objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        listener = new NotificationEventListener(notificationRepository, processedEventRepository, objectMapper);
-    }
+    private final NotificationRepository notificationRepository = mock(NotificationRepository.class);
+    private final ProcessedEventRepository processedEventRepository = mock(ProcessedEventRepository.class);
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private final NotificationEventListener listener = new NotificationEventListener(
+            notificationRepository,
+            processedEventRepository,
+            objectMapper
+    );
 
     @Test
-    @DisplayName("Deve persistir notificação e registrar deduplicação ao consumir atualização do laboratório")
-    void shouldPersistNotificationAndSaveDeduplicationRecord() throws Exception {
+    void devePersistirNotificacaoERegistrarDeduplicacaoQuandoConsumirAtualizacao() throws Exception {
         UUID orderId = UUID.randomUUID();
         UUID patientId = UUID.randomUUID();
         ExamLaboratoryUpdatedEvent event = new ExamLaboratoryUpdatedEvent(
@@ -70,8 +63,7 @@ class NotificationEventListenerTest {
     }
 
     @Test
-    @DisplayName("Deve descartar evento duplicado sem criar nova notificação")
-    void shouldIgnoreDuplicateEvent() throws Exception {
+    void naoDeveCriarNotificacaoQuandoEventoForDuplicado() throws Exception {
         ExamLaboratoryUpdatedEvent event = new ExamLaboratoryUpdatedEvent(
                 UUID.randomUUID(),
                 UUID.randomUUID(),
@@ -89,5 +81,27 @@ class NotificationEventListenerTest {
 
         verify(notificationRepository, never()).save(any(Notification.class));
         verify(processedEventRepository, never()).save(any(ProcessedEvent.class));
+    }
+
+    @Test
+    void deveGerarMensagemAmigavelParaEtapasIntermediariasEEncerramentos() throws Exception {
+        ExamLaboratoryUpdatedEvent inTransitEvent = new ExamLaboratoryUpdatedEvent(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "GLICOSE",
+                ExamStatus.IN_TRANSIT,
+                Instant.now()
+        );
+        when(processedEventRepository.existsByEventIdAndConsumerGroup(inTransitEvent.eventId(), "notification-group"))
+                .thenReturn(false);
+
+        listener.onLaboratoryUpdated(objectMapper.writeValueAsString(inTransitEvent));
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        assertThat(captor.getValue().getMessage())
+                .contains("em transporte")
+                .doesNotContain("IN_TRANSIT");
     }
 }

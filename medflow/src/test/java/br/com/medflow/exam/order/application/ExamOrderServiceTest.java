@@ -46,6 +46,7 @@ import br.com.medflow.messaging.outbox.persistence.OutboxEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class ExamOrderServiceTest {
 
@@ -74,7 +75,7 @@ class ExamOrderServiceTest {
         when(repository.save(any(ExamOrder.class)))
                 .thenAnswer(invocation -> {
                     ExamOrder order = invocation.getArgument(0);
-                    org.springframework.test.util.ReflectionTestUtils.setField(order, "id", UUID.randomUUID());
+                    ReflectionTestUtils.setField(order, "id", UUID.randomUUID());
                     return order;
                 });
 
@@ -314,10 +315,40 @@ class ExamOrderServiceTest {
     }
 
     @Test
+    void naoDeveAtualizarOrdemQuandoJaEstiverNoLaboratorio() {
+        UUID id = UUID.randomUUID();
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "GLICOSE", ExamPriority.NORMAL);
+        ReflectionTestUtils.setField(examOrder, "id", id);
+        examOrder.acceptByLaboratory();
+        when(repository.findById(id)).thenReturn(Optional.of(examOrder));
+
+        assertThatThrownBy(() -> service.update(
+                id,
+                new UpdateExamRequestDto(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.URGENT)
+        )).isInstanceOf(ExamOrderStatusTransitionException.class);
+
+        verify(repository, never()).save(any(ExamOrder.class));
+    }
+
+    @Test
+    void naoDeveExcluirOrdemQuandoJaEstiverNoLaboratorio() {
+        UUID id = UUID.randomUUID();
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "GLICOSE", ExamPriority.NORMAL);
+        ReflectionTestUtils.setField(examOrder, "id", id);
+        examOrder.acceptByLaboratory();
+        when(repository.findById(id)).thenReturn(Optional.of(examOrder));
+
+        assertThatThrownBy(() -> service.delete(id))
+                .isInstanceOf(ExamOrderStatusTransitionException.class);
+
+        verify(repository, never()).delete(any(ExamOrder.class));
+    }
+
+    @Test
     void deveEvoluirStatusOperacionalERegistrarEventoOutbox() {
         UUID id = UUID.randomUUID();
         ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.URGENT);
-        org.springframework.test.util.ReflectionTestUtils.setField(examOrder, "id", id);
+        ReflectionTestUtils.setField(examOrder, "id", id);
         when(repository.findById(id)).thenReturn(Optional.of(examOrder));
         when(repository.save(examOrder)).thenReturn(examOrder);
 
@@ -336,7 +367,7 @@ class ExamOrderServiceTest {
     void naoDeveAlterarStatusDiretamenteParaReleasedSemLaudo() {
         UUID id = UUID.randomUUID();
         ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
-        org.springframework.test.util.ReflectionTestUtils.setField(examOrder, "id", id);
+        ReflectionTestUtils.setField(examOrder, "id", id);
         when(repository.findById(id)).thenReturn(Optional.of(examOrder));
 
         assertThatThrownBy(() -> service.updateStatus(id, new UpdateExamStatusRequestDto(ExamStatus.RELEASED)))
@@ -361,7 +392,7 @@ class ExamOrderServiceTest {
     void naoDeveAtualizarStatusQuandoOrdemEstiverCanceladaOuRejeitada() {
         UUID id = UUID.randomUUID();
         ExamOrder cancelledOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
-        org.springframework.test.util.ReflectionTestUtils.setField(cancelledOrder, "id", id);
+        ReflectionTestUtils.setField(cancelledOrder, "id", id);
         cancelledOrder.changeStatus(ExamStatus.CANCELLED);
         when(repository.findById(id)).thenReturn(Optional.of(cancelledOrder));
 
@@ -376,12 +407,12 @@ class ExamOrderServiceTest {
     void deveRegistrarResultadoLiberarOrdemEGravarOutbox() {
         UUID id = UUID.randomUUID();
         ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.URGENT);
-        org.springframework.test.util.ReflectionTestUtils.setField(examOrder, "id", id);
+        ReflectionTestUtils.setField(examOrder, "id", id);
         when(repository.findById(id)).thenReturn(Optional.of(examOrder));
         when(examResultRepository.existsByOrderId(id)).thenReturn(false);
         when(examResultRepository.save(any(ExamResult.class))).thenAnswer(inv -> {
             ExamResult r = inv.getArgument(0);
-            org.springframework.test.util.ReflectionTestUtils.setField(r, "id", UUID.randomUUID());
+            ReflectionTestUtils.setField(r, "id", UUID.randomUUID());
             return r;
         });
         when(repository.save(examOrder)).thenReturn(examOrder);
@@ -402,7 +433,7 @@ class ExamOrderServiceTest {
     void naoDeveRegistrarResultadoQuandoOrdemJaPossuirResultadoOuEstiverEncerrada() {
         UUID id = UUID.randomUUID();
         ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
-        org.springframework.test.util.ReflectionTestUtils.setField(examOrder, "id", id);
+        ReflectionTestUtils.setField(examOrder, "id", id);
         when(repository.findById(id)).thenReturn(Optional.of(examOrder));
         when(examResultRepository.existsByOrderId(id)).thenReturn(true);
 
@@ -416,7 +447,7 @@ class ExamOrderServiceTest {
     void naoDeveRegistrarResultadoQuandoOrdemEstiverCanceladaOuRejeitada() {
         UUID cancelledId = UUID.randomUUID();
         ExamOrder cancelledOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
-        org.springframework.test.util.ReflectionTestUtils.setField(cancelledOrder, "id", cancelledId);
+        ReflectionTestUtils.setField(cancelledOrder, "id", cancelledId);
         cancelledOrder.changeStatus(ExamStatus.CANCELLED);
         when(repository.findById(cancelledId)).thenReturn(Optional.of(cancelledOrder));
         when(examResultRepository.existsByOrderId(cancelledId)).thenReturn(false);
@@ -426,7 +457,7 @@ class ExamOrderServiceTest {
 
         UUID rejectedId = UUID.randomUUID();
         ExamOrder rejectedOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
-        org.springframework.test.util.ReflectionTestUtils.setField(rejectedOrder, "id", rejectedId);
+        ReflectionTestUtils.setField(rejectedOrder, "id", rejectedId);
         rejectedOrder.changeStatus(ExamStatus.REJECTED);
         when(repository.findById(rejectedId)).thenReturn(Optional.of(rejectedOrder));
         when(examResultRepository.existsByOrderId(rejectedId)).thenReturn(false);

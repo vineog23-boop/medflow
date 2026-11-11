@@ -3,6 +3,7 @@ package br.com.medflow.notification.web;
 import br.com.medflow.exam.order.domain.enums.ExamStatus;
 import br.com.medflow.notification.application.NotificationService;
 import br.com.medflow.notification.application.dto.response.NotificationResponseDto;
+import br.com.medflow.shared.web.error.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageImpl;
@@ -22,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,6 +34,7 @@ class NotificationControllerTest {
 
     private final NotificationService notificationService = mock(NotificationService.class);
     private final MockMvc mockMvc = standaloneSetup(new NotificationController(notificationService))
+            .setControllerAdvice(new GlobalExceptionHandler())
             .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
             .build();
 
@@ -83,5 +86,14 @@ class NotificationControllerTest {
         Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("createdAt");
         assertThat(order).isNotNull();
         assertThat(order.getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void deveRetornar400QuandoPatientIdForInvalido() throws Exception {
+        mockMvc.perform(get("/notifications").param("patientId", "uuid-invalido"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("urn:medflow:problem:invalid-request"));
+
+        verifyNoInteractions(notificationService);
     }
 }

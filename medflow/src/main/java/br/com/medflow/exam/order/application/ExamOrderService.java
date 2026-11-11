@@ -11,10 +11,12 @@ import br.com.medflow.exam.order.application.dto.request.UpdateExamStatusRequest
 import br.com.medflow.exam.order.application.dto.response.ExamOrderResponseDto;
 import br.com.medflow.exam.order.application.dto.response.ExamResultResponseDto;
 import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundException;
+import br.com.medflow.exam.order.application.exception.ExamOrderStatusTransitionException;
 import br.com.medflow.exam.order.application.exception.ExamResultConflictException;
 import br.com.medflow.exam.order.application.exception.ExamResultNotFoundException;
 import br.com.medflow.exam.order.domain.ExamOrder;
 import br.com.medflow.exam.order.domain.ExamResult;
+import br.com.medflow.exam.order.domain.enums.ExamStatus;
 import br.com.medflow.exam.order.domain.event.ExamLaboratoryUpdatedEvent;
 import br.com.medflow.exam.order.domain.event.ExamOrderCreatedEvent;
 import br.com.medflow.exam.order.persistence.ExamOrderRepository;
@@ -72,7 +74,7 @@ public class ExamOrderService {
         ExamOrder savedExamOrder = examOrderRepository.save(examOrder);
 
         // 3. Registro do evento na tabela Outbox (na mesma transação)
-        salvarEventoOutbox(savedExamOrder);
+        enqueueOrderCreatedEvent(savedExamOrder);
 
         // 4. Retorno para quem chamou a API
         return new ExamOrderResponseDto(savedExamOrder);
@@ -90,9 +92,14 @@ public class ExamOrderService {
                 .map(ExamOrderResponseDto::new);
     }
 
+    @Transactional
     public ExamOrderResponseDto update(UUID id, UpdateExamRequestDto request) {
         ExamOrder examOrder = examOrderRepository.findById(id)
                 .orElseThrow(() -> new ExamOrderNotFoundException(id));
+
+        if (examOrder.getStatus() != ExamStatus.RECEIVED) {
+            throw new ExamOrderStatusTransitionException(id, examOrder.getStatus(), ExamStatus.RECEIVED);
+        }
 
         validatePatientExists(request.patientId());
         ExamDefinition definition = findActiveDefinition(request.examCode());
@@ -107,9 +114,14 @@ public class ExamOrderService {
         return new ExamOrderResponseDto(updatedExamOrder);
     }
 
+    @Transactional
     public void delete(UUID id) {
         ExamOrder examOrder = examOrderRepository.findById(id)
                 .orElseThrow(() -> new ExamOrderNotFoundException(id));
+
+        if (examOrder.getStatus() != ExamStatus.RECEIVED) {
+            throw new ExamOrderStatusTransitionException(id, examOrder.getStatus(), ExamStatus.CANCELLED);
+        }
 
         examOrderRepository.delete(examOrder);
     }
@@ -124,7 +136,7 @@ public class ExamOrderService {
 
         examOrder.changeStatus(request.status());
         ExamOrder savedExamOrder = examOrderRepository.save(examOrder);
-        salvarEventoLaboratorioOutbox(savedExamOrder);
+        enqueueLaboratoryUpdatedEvent(savedExamOrder);
 
         return new ExamOrderResponseDto(savedExamOrder);
     }
@@ -152,7 +164,7 @@ public class ExamOrderService {
 
         examOrder.markReleased();
         ExamOrder savedOrder = examOrderRepository.save(examOrder);
-        salvarEventoLaboratorioOutbox(savedOrder);
+        enqueueLaboratoryUpdatedEvent(savedOrder);
 
         return new ExamResultResponseDto(savedResult);
     }
@@ -164,14 +176,26 @@ public class ExamOrderService {
         return new ExamResultResponseDto(examResult);
     }
 
-    private void salvarEventoLaboratorioOutbox(ExamOrder order) {
-        ExamLaboratoryUpdatedEvent event = new ExamLaboratoryUpdatedEvent(order);
-        saveOutboxRecord(event.eventId(), "LABORATORY_UPDATE", order.getId(), "ExamLaboratoryUpdatedEvent", event);
+    private void enqueueLaboratoryUpdatedEvent(ExamOrder examOrder) {
+        ExamLaboratoryUpdatedEvent event = new ExamLaboratoryUpdatedEvent(examOrder);
+        saveOutboxRecord(
+                event.eventId(),
+                "LABORATORY_UPDATE",
+                examOrder.getId(),
+                "ExamLaboratoryUpdatedEvent",
+                event
+        );
     }
 
-    private void salvarEventoOutbox(ExamOrder order) {
-        ExamOrderCreatedEvent event = new ExamOrderCreatedEvent(order);
-        saveOutboxRecord(event.eventId(), "EXAM_ORDER", order.getId(), "ExamOrderCreatedEvent", event);
+    private void enqueueOrderCreatedEvent(ExamOrder examOrder) {
+        ExamOrderCreatedEvent event = new ExamOrderCreatedEvent(examOrder);
+        saveOutboxRecord(
+                event.eventId(),
+                "EXAM_ORDER",
+                examOrder.getId(),
+                "ExamOrderCreatedEvent",
+                event
+        );
     }
 
     private void saveOutboxRecord(

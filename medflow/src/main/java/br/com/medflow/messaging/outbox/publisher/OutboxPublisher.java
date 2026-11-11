@@ -5,7 +5,6 @@ import br.com.medflow.messaging.outbox.domain.OutboxStatus;
 import br.com.medflow.messaging.outbox.persistence.OutboxEventRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -39,14 +38,6 @@ public class OutboxPublisher {
     private final String examOrdersTopic;
     private final String examNotificationsTopic;
 
-    public OutboxPublisher(
-            OutboxEventRepository repository,
-            KafkaTemplate<String, String> kafkaTemplate,
-            String examOrdersTopic) {
-        this(repository, kafkaTemplate, examOrdersTopic, "exam-notifications.v1");
-    }
-
-    @Autowired
     public OutboxPublisher(
             OutboxEventRepository repository,
             KafkaTemplate<String, String> kafkaTemplate,

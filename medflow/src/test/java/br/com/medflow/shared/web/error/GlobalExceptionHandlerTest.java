@@ -43,7 +43,7 @@ class GlobalExceptionHandlerTest {
     private MockMvc mockMvc;
 
     @BeforeEach
-    void setUp() {
+    void configurarMockMvc() {
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
@@ -54,12 +54,12 @@ class GlobalExceptionHandlerTest {
     }
 
     @AfterEach
-    void tearDown() {
+    void fecharValidator() {
         validator.close();
     }
 
     @Test
-    void shouldReturnProblemDetailWhenPatientDoesNotExist() throws Exception {
+    void deveRetornarProblemDetailQuandoPacienteNaoExistir() throws Exception {
         mockMvc.perform(get("/test-errors/patients/{id}", ID))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -74,7 +74,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnProblemDetailWhenExamOrderDoesNotExist() throws Exception {
+    void deveRetornarProblemDetailQuandoOrdemDeExameNaoExistir() throws Exception {
         mockMvc.perform(get("/test-errors/exam-orders/{id}", ID))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -89,7 +89,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnProblemDetailWhenExamDefinitionDoesNotExist() throws Exception {
+    void deveRetornarProblemDetailQuandoDefinicaoDeExameNaoExistir() throws Exception {
         mockMvc.perform(get("/test-errors/exam-definitions/missing/{code}", "HEMOGRAMA"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -104,7 +104,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnProblemDetailWhenExamDefinitionCodeAlreadyExists() throws Exception {
+    void deveRetornarProblemDetailQuandoCodigoDeExameJaEstiverCadastrado() throws Exception {
         mockMvc.perform(get("/test-errors/exam-definitions/conflict/{code}", "HEMOGRAMA"))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -119,7 +119,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnProblemDetailWhenExamDefinitionIsInactive() throws Exception {
+    void deveRetornarProblemDetailQuandoDefinicaoDeExameEstiverInativa() throws Exception {
         mockMvc.perform(get("/test-errors/exam-definitions/inactive/{code}", "HEMOGRAMA"))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -134,7 +134,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnProblemDetailWhenExamOrderStatusTransitionIsInvalid() throws Exception {
+    void deveRetornarProblemDetailQuandoTransicaoDeStatusForInvalida() throws Exception {
         mockMvc.perform(get("/test-errors/exam-orders/{id}/status-conflict", ID))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -147,7 +147,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnProblemDetailWhenExamResultDoesNotExist() throws Exception {
+    void deveRetornarProblemDetailQuandoResultadoDeExameNaoExistir() throws Exception {
         mockMvc.perform(get("/test-errors/exam-orders/{id}/result-missing", ID))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -160,7 +160,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnProblemDetailWhenExamResultConflicts() throws Exception {
+    void deveRetornarProblemDetailQuandoResultadoDeExameEstiverEmConflito() throws Exception {
         mockMvc.perform(get("/test-errors/exam-orders/{id}/result-conflict", ID))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -173,7 +173,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnValidationErrorsWithJsonPointers() throws Exception {
+    void deveRetornarErrosDeValidacaoComJsonPointers() throws Exception {
         String body = """
                 {
                   "fullName": "",
@@ -206,7 +206,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnMessagesForTheRemainingPatientConstraints() throws Exception {
+    void deveRetornarMensagensParaDemaisRestricoesDePaciente() throws Exception {
         String body = """
                 {
                   "fullName": "%s"
@@ -229,7 +229,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnInvalidRequestForMalformedJson() throws Exception {
+    void deveRetornarRequisicaoInvalidaQuandoJsonEstiverMalformado() throws Exception {
         mockMvc.perform(post("/test-errors/body")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"))
@@ -245,7 +245,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnInvalidRequestForInvalidParameterType() throws Exception {
+    void deveRetornarRequisicaoInvalidaQuandoTipoDoParametroForInvalido() throws Exception {
         mockMvc.perform(get("/test-errors/uuid/uuid-invalido"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -260,7 +260,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldReturnSafeProblemDetailForUnexpectedException() throws Exception {
+    void deveRetornarProblemDetailSeguroParaExcecaoInesperada() throws Exception {
         mockMvc.perform(get("/test-errors/unexpected"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))

@@ -25,7 +25,6 @@ import br.com.medflow.patient.domain.PatientEntity;
 import br.com.medflow.patient.persistence.PatientRepository;
 import br.com.medflow.support.KafkaTestContainerConfiguration;
 import br.com.medflow.support.PostgreSqlTestContainerConfiguration;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -77,8 +76,7 @@ class ExamOrderMessagingIntegrationTest {
     private KafkaTemplate<String, String> kafkaTemplate;
 
     @Test
-    @DisplayName("Fluxo E2E: Pedido Médico -> Kafka Laboratório (AWAITING_COLLECTION) -> Coleta & Resultado -> Kafka Notificações -> Idempotência")
-    void shouldExecuteEndToEndMessagingFlow() {
+    void deveExecutarFluxoCompletoDePedidoLaboratorioNotificacoesEIdempotencia() {
         // 1. Pré-requisitos: Recepção cadastra Paciente e Laboratório cadastra definição no catálogo
         PatientEntity patient = new PatientEntity(
                 "Carlos Silva",

@@ -12,8 +12,4 @@ public class ExamOrderStatusTransitionException extends RuntimeException {
     public ExamOrderStatusTransitionException(UUID orderId, ExamStatus currentStatus, ExamStatus targetStatus) {
         super("Não é possível alterar a ordem " + orderId + " do status " + currentStatus + " para " + targetStatus);
     }
-
-    public ExamOrderStatusTransitionException(String message) {
-        super(message);
-    }
 }

@@ -70,10 +70,16 @@ public class NotificationEventListener {
 
     private String buildMessage(String examCode, ExamStatus status) {
         return switch (status) {
+            case RECEIVED -> "Seu pedido de exame " + examCode + " foi recebido pelo sistema.";
+            case AWAITING_COLLECTION -> "Seu pedido de exame " + examCode + " foi aceito pelo laboratório e aguarda coleta.";
             case COLLECTED -> "Sua amostra para o exame " + examCode + " foi coletada pelo laboratório.";
+            case IN_TRANSIT -> "Sua amostra para o exame " + examCode + " está em transporte para o laboratório.";
+            case RECEIVED_AT_LAB -> "Sua amostra para o exame " + examCode + " foi recebida na unidade de análise do laboratório.";
+            case PROCESSING -> "Seu exame " + examCode + " entrou em análise no laboratório.";
+            case VALIDATED -> "A análise do seu exame " + examCode + " foi validada e aguarda liberação do laudo.";
             case RELEASED -> "O resultado do seu exame " + examCode + " foi liberado pelo laboratório.";
-            case REJECTED, CANCELLED -> "Seu exame " + examCode + " foi encerrado com status " + status + ".";
-            default -> "Status do exame " + examCode + " atualizado para " + status + ".";
+            case REJECTED -> "Seu pedido de exame " + examCode + " foi rejeitado pelo laboratório.";
+            case CANCELLED -> "Seu pedido de exame " + examCode + " foi cancelado.";
         };
     }
 }

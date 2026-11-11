@@ -3,8 +3,6 @@ package br.com.medflow.messaging.outbox.publisher;
 import br.com.medflow.messaging.outbox.domain.OutboxEvent;
 import br.com.medflow.messaging.outbox.domain.OutboxStatus;
 import br.com.medflow.messaging.outbox.persistence.OutboxEventRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -23,21 +21,18 @@ import static org.mockito.Mockito.when;
 
 class OutboxPublisherTest {
 
-    private OutboxEventRepository repository;
-    private KafkaTemplate<String, String> kafkaTemplate;
-    private OutboxPublisher publisher;
-
-    @BeforeEach
+    private final OutboxEventRepository repository = mock(OutboxEventRepository.class);
     @SuppressWarnings("unchecked")
-    void setUp() {
-        repository = mock(OutboxEventRepository.class);
-        kafkaTemplate = (KafkaTemplate<String, String>) mock(KafkaTemplate.class);
-        publisher = new OutboxPublisher(repository, kafkaTemplate, "exam-orders.v1", "exam-notifications.v1");
-    }
+    private final KafkaTemplate<String, String> kafkaTemplate = (KafkaTemplate<String, String>) mock(KafkaTemplate.class);
+    private final OutboxPublisher publisher = new OutboxPublisher(
+            repository,
+            kafkaTemplate,
+            "exam-orders.v1",
+            "exam-notifications.v1"
+    );
 
     @Test
-    @DisplayName("Deve publicar eventos pendentes no Kafka e marcar status como PUBLISHED")
-    void shouldPublishPendingEventsAndUpdateStatus() {
+    void devePublicarEventosPendentesNoKafkaEMarcarComoPublished() {
         UUID eventId = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
         String payload = "{\"orderId\":\"" + orderId + "\"}";
@@ -53,6 +48,7 @@ class OutboxPublisherTest {
         when(repository.findByStatusOrderByCreatedAtAsc(eq(OutboxStatus.PENDING), any(Pageable.class)))
                 .thenReturn(List.of(pendingEvent));
 
+        @SuppressWarnings("unchecked")
         SendResult<String, String> sendResult = mock(SendResult.class);
         CompletableFuture<SendResult<String, String>> future = CompletableFuture.completedFuture(sendResult);
 
@@ -68,8 +64,7 @@ class OutboxPublisherTest {
     }
 
     @Test
-    @DisplayName("Deve rotear eventos de atualização do laboratório para o tópico exam-notifications.v1")
-    void shouldRouteLaboratoryUpdatesToNotificationsTopic() {
+    void deveRotearEventosDoLaboratorioParaTopicoDeNotificacoes() {
         UUID eventId = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
         String payload = "{\"orderId\":\"" + orderId + "\",\"status\":\"RELEASED\"}";
@@ -85,6 +80,7 @@ class OutboxPublisherTest {
         when(repository.findByStatusOrderByCreatedAtAsc(eq(OutboxStatus.PENDING), any(Pageable.class)))
                 .thenReturn(List.of(labEvent));
 
+        @SuppressWarnings("unchecked")
         SendResult<String, String> sendResult = mock(SendResult.class);
         when(kafkaTemplate.send(eq("exam-notifications.v1"), eq(orderId.toString()), eq(payload)))
                 .thenReturn(CompletableFuture.completedFuture(sendResult));

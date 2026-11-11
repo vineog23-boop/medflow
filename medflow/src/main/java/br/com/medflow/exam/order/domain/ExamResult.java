@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -32,14 +33,16 @@ public class ExamResult {
     @NotNull
     private UUID patientId;
 
-    @Column(name = "exam_code", nullable = false, length = 50)
     @NotBlank
+    @Size(max = 50)
+    @Column(name = "exam_code", nullable = false, length = 50)
     private String examCode;
 
-    @Column(name = "result_text", nullable = false, columnDefinition = "TEXT")
     @NotBlank
+    @Column(name = "result_text", nullable = false, columnDefinition = "TEXT")
     private String resultText;
 
+    @NotNull
     @Column(name = "released_at", nullable = false, updatable = false)
     private Instant releasedAt;
 
@@ -47,6 +50,16 @@ public class ExamResult {
     }
 
     public ExamResult(UUID orderId, UUID patientId, String examCode, String resultText) {
+        validateData(orderId, patientId, examCode, resultText);
+
+        this.orderId = orderId;
+        this.patientId = patientId;
+        this.examCode = examCode.trim();
+        this.resultText = resultText.trim();
+        this.releasedAt = Instant.now();
+    }
+
+    private static void validateData(UUID orderId, UUID patientId, String examCode, String resultText) {
         if (orderId == null) {
             throw new IllegalArgumentException("Ordem de exame deve ser informada");
         }
@@ -56,15 +69,12 @@ public class ExamResult {
         if (examCode == null || examCode.isBlank()) {
             throw new IllegalArgumentException("Código do exame deve ser informado");
         }
+        if (examCode.trim().length() > 50) {
+            throw new IllegalArgumentException("Código do exame deve ter no máximo 50 caracteres");
+        }
         if (resultText == null || resultText.isBlank()) {
             throw new IllegalArgumentException("Texto do resultado deve ser informado");
         }
-
-        this.orderId = orderId;
-        this.patientId = patientId;
-        this.examCode = examCode.trim();
-        this.resultText = resultText.trim();
-        this.releasedAt = Instant.now();
     }
 
     public UUID getId() {

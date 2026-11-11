@@ -88,15 +88,14 @@ public class KafkaConfig {
      * CONSUMER FACTORY (A Montadora de Conexões de Escuta):
      * Define como o cliente do Kafka deve se comportar ao escutar tópicos:
      * - Onde o servidor está rodando (BOOTSTRAP_SERVERS_CONFIG).
-     * - O identificador do grupo consumidor padrão (GROUP_ID_CONFIG).
      * - Ler desde o início da fila se for a primeira vez (AUTO_OFFSET_RESET_CONFIG = "earliest").
      * - Como ler os bytes que chegam da rede e transformá-los em String (StringDeserializer).
+     * - O groupId é definido explicitamente em cada @KafkaListener.
      */
     @Bean
     public ConsumerFactory<String, String> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-group");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);

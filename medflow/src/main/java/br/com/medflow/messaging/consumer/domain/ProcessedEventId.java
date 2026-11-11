@@ -20,8 +20,14 @@ public class ProcessedEventId implements Serializable {
     }
 
     public ProcessedEventId(UUID eventId, String consumerGroup) {
-        this.eventId = Objects.requireNonNull(eventId, "eventId must not be null");
-        this.consumerGroup = Objects.requireNonNull(consumerGroup, "consumerGroup must not be null");
+        if (eventId == null) {
+            throw new IllegalArgumentException("Evento deve ser informado");
+        }
+        if (consumerGroup == null || consumerGroup.isBlank()) {
+            throw new IllegalArgumentException("Grupo consumidor deve ser informado");
+        }
+        this.eventId = eventId;
+        this.consumerGroup = consumerGroup.trim();
     }
 
     public UUID getEventId() {
