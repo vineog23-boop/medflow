@@ -2,6 +2,8 @@ package br.com.medflow;
 
 import br.com.medflow.exam.definition.persistence.ExamDefinitionRepository;
 import br.com.medflow.exam.order.persistence.ExamOrderRepository;
+import br.com.medflow.exam.order.persistence.ExamResultRepository;
+import br.com.medflow.notification.persistence.NotificationRepository;
 import br.com.medflow.patient.persistence.PatientRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +30,12 @@ class MedflowApplicationTests {
 
 	@MockitoBean
 	private br.com.medflow.messaging.consumer.persistence.ProcessedEventRepository processedEventRepository;
+
+	@MockitoBean
+	private ExamResultRepository examResultRepository;
+
+	@MockitoBean
+	private NotificationRepository notificationRepository;
 
 	@Test
 	void contextLoads() {

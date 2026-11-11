@@ -70,4 +70,4 @@ T3 -> T4
 - [x] T1 - Criar migration V4, entidades ExamResult e Notification e regras de estado na ExamOrder. Gate: 15 testes, 0 falhas.
 - [x] T2 - Implementar evolução de status, entrega/consulta de ExamResult e tratamento RFC 9457. Gate: 37 testes, 0 falhas.
 - [x] T3 - Implementar LaboratoryEventListener e roteamento para exam-notifications.v1 no OutboxPublisher. Gate: 5 testes, 0 falhas.
-- [ ] T4 - Persistir Notification no NotificationEventListener, expor GET /notifications e provar fluxo E2E
+- [x] T4 - Persistir Notification no NotificationEventListener, expor GET /notifications e provar fluxo E2E. Gate: 119 testes, 0 falhas.
