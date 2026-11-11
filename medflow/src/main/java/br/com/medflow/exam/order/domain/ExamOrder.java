@@ -1,5 +1,6 @@
 package br.com.medflow.exam.order.domain;
 
+import br.com.medflow.exam.order.application.exception.ExamOrderStatusTransitionException;
 import br.com.medflow.exam.order.domain.enums.ExamPriority;
 import br.com.medflow.exam.order.domain.enums.ExamStatus;
 import jakarta.persistence.Column;
@@ -88,6 +89,55 @@ public class ExamOrder {
         }
 
         this.updatedAt = Instant.now();
+    }
+
+    /**
+     * Aceita a ordem no laboratório movendo de RECEIVED para AWAITING_COLLECTION.
+     * Mantém o status atual caso a ordem já tenha avançado (proteção contra eventos atrasados).
+     */
+    public boolean acceptByLaboratory() {
+        if (this.status != ExamStatus.RECEIVED) {
+            return false;
+        }
+        this.status = ExamStatus.AWAITING_COLLECTION;
+        this.updatedAt = Instant.now();
+        return true;
+    }
+
+    /**
+     * Evolui a etapa operacional no laboratório, impedindo liberar resultado sem laudo (RELEASED)
+     * ou alterar ordens já finalizadas.
+     */
+    public void changeStatus(ExamStatus targetStatus) {
+        if (targetStatus == null) {
+            throw new IllegalArgumentException("Status do exame deve ser informado");
+        }
+        if (isTerminalStatus()) {
+            throw new ExamOrderStatusTransitionException(this.id, this.status, targetStatus);
+        }
+        if (targetStatus == ExamStatus.RECEIVED || targetStatus == ExamStatus.RELEASED) {
+            throw new ExamOrderStatusTransitionException(this.id, this.status, targetStatus);
+        }
+
+        this.status = targetStatus;
+        this.updatedAt = Instant.now();
+    }
+
+    /**
+     * Conclui a entrega do exame ao registrar o laudo clínico (ExamResult).
+     */
+    public void markReleased() {
+        if (isTerminalStatus()) {
+            throw new ExamOrderStatusTransitionException(this.id, this.status, ExamStatus.RELEASED);
+        }
+        this.status = ExamStatus.RELEASED;
+        this.updatedAt = Instant.now();
+    }
+
+    public boolean isTerminalStatus() {
+        return this.status == ExamStatus.RELEASED
+                || this.status == ExamStatus.REJECTED
+                || this.status == ExamStatus.CANCELLED;
     }
 
     private static void validateData(UUID patientId, String examCode) {

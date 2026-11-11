@@ -1,5 +1,6 @@
 package br.com.medflow.exam.order.domain;
 
+import br.com.medflow.exam.order.application.exception.ExamOrderStatusTransitionException;
 import br.com.medflow.exam.order.domain.enums.ExamPriority;
 import br.com.medflow.exam.order.domain.enums.ExamStatus;
 import org.junit.jupiter.api.Test;
@@ -124,5 +125,43 @@ class ExamOrderTest {
         ))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Código do exame deve ter no máximo 50 caracteres");
+    }
+
+    @Test
+    void deveAceitarOrdemNoLaboratorioQuandoEstiverEmReceived() {
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
+
+        boolean changed = examOrder.acceptByLaboratory();
+
+        assertThat(changed).isTrue();
+        assertThat(examOrder.getStatus()).isEqualTo(ExamStatus.AWAITING_COLLECTION);
+    }
+
+    @Test
+    void naoDeveRetrocederStatusAoAceitarOrdemJaEmEtapaPosterior() {
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
+        examOrder.changeStatus(ExamStatus.COLLECTED);
+
+        boolean changed = examOrder.acceptByLaboratory();
+
+        assertThat(changed).isFalse();
+        assertThat(examOrder.getStatus()).isEqualTo(ExamStatus.COLLECTED);
+    }
+
+    @Test
+    void deveEvoluirEtapasOperacionaisERejeitarReleasedDiretoOuOrdemFinalizada() {
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
+
+        examOrder.changeStatus(ExamStatus.COLLECTED);
+        assertThat(examOrder.getStatus()).isEqualTo(ExamStatus.COLLECTED);
+
+        assertThatThrownBy(() -> examOrder.changeStatus(ExamStatus.RELEASED))
+                .isInstanceOf(ExamOrderStatusTransitionException.class);
+
+        examOrder.markReleased();
+        assertThat(examOrder.getStatus()).isEqualTo(ExamStatus.RELEASED);
+
+        assertThatThrownBy(() -> examOrder.changeStatus(ExamStatus.PROCESSING))
+                .isInstanceOf(ExamOrderStatusTransitionException.class);
     }
 }
