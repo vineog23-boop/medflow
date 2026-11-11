@@ -20,12 +20,12 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/persistencia-postgresql`
+- **Feature**: `.specs/features/fluxo-laboratorio-notificacoes`
 - **Phase / Task**: concluída e validada
-- **Completed**: T1, T2, T3, T4, T5
+- **Completed**: T1, T2, T3, T4 + correções de cobertura e mutantes (`28e8e13`)
 - **In-progress** (file:line): none
-- **Next step**: executar o fluxo manual no Postman com apoio guiado.
+- **Next step**: revisar os commits na branch `main` ou publicar/atualizar o diagrama conforme necessidade.
 - **Blockers**: none
-- **Validation**: PASS; 13/13 critérios, 92/92 testes e 3/3 mutações mortas.
-- **Uncommitted files**: arquivos de saída e scripts didáticos já existentes, preservados.
+- **Validation**: PASS (Round 2); 15/15 critérios, 130/130 testes e 8/8 mutações mortas (`validate_state.py`: 0 errors).
+- **Uncommitted files**: arquivos auxiliares e saídas pré-existentes preservados.
 - **Branch**: main

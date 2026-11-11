@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 4,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "surviving_mutant::assert pageable sort field and direction in controller tests instead of matching pageable with any",
+      "text": "Assert Pageable sort field and direction in controller tests instead of matching Pageable with any",
+      "signal": "surviving_mutant",
+      "scope": "web-controllers",
+      "status": "candidate",
+      "features": [
+        "fluxo-laboratorio-notificacoes"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "NotificationController.java:30 (Mutant 4) (web-controllers)"
+      ],
+      "created": "2026-11-11T21:03:56Z",
+      "last_seen": "2026-11-11T21:03:56Z"
+    },
+    {
+      "id": "L-002",
+      "key": "surviving_mutant::test every boolean or branch guard independently in service unit tests",
+      "text": "Test every boolean OR-branch guard independently in service unit tests",
+      "signal": "surviving_mutant",
+      "scope": "service-layer",
+      "status": "candidate",
+      "features": [
+        "fluxo-laboratorio-notificacoes"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "ExamOrderService.java:141 (Mutant 5) (service-layer)"
+      ],
+      "created": "2026-11-11T21:03:56Z",
+      "last_seen": "2026-11-11T21:03:56Z"
+    },
+    {
+      "id": "L-003",
+      "key": "ac_gap::verify enumerated invalid states and service not found exceptions directly on each new endpoint and service method",
+      "text": "Verify enumerated invalid states and service not-found exceptions directly on each new endpoint and service method",
+      "signal": "ac_gap",
+      "scope": "exam-order",
+      "status": "candidate",
+      "features": [
+        "fluxo-laboratorio-notificacoes"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "FLOW-02 AC 2.1, AC 2.2, AC 2.3 (exam-order)"
+      ],
+      "created": "2026-11-11T21:03:56Z",
+      "last_seen": "2026-11-11T21:03:56Z"
+    }
+  ]
+}
