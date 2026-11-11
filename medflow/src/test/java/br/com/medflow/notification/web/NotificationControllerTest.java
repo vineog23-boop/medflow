@@ -4,8 +4,11 @@ import br.com.medflow.exam.order.domain.enums.ExamStatus;
 import br.com.medflow.notification.application.NotificationService;
 import br.com.medflow.notification.application.dto.response.NotificationResponseDto;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -13,6 +16,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -32,7 +36,7 @@ class NotificationControllerTest {
             .build();
 
     @Test
-    void deveListarTodasNotificacoesPaginadasQuandoSemFiltro() throws Exception {
+    void deveListarTodasNotificacoesPaginadasOrdenadasPorMaisRecenteQuandoSemFiltro() throws Exception {
         UUID patientId = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
         NotificationResponseDto dto = new NotificationResponseDto(
@@ -56,11 +60,15 @@ class NotificationControllerTest {
                 .andExpect(jsonPath("$.content[0].orderId").value(orderId.toString()))
                 .andExpect(jsonPath("$.content[0].status").value("COLLECTED"));
 
-        verify(notificationService).findAll(isNull(), any());
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(notificationService).findAll(isNull(), pageableCaptor.capture());
+        Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("createdAt");
+        assertThat(order).isNotNull();
+        assertThat(order.getDirection()).isEqualTo(Sort.Direction.DESC);
     }
 
     @Test
-    void deveFiltrarNotificacoesPorPacienteId() throws Exception {
+    void deveFiltrarNotificacoesPorPacienteIdMantendoOrdenacaoDecrescente() throws Exception {
         UUID patientId = UUID.fromString("76cb605b-71dc-47e8-83b5-83f2ef99a7cf");
         when(notificationService.findAll(eq(patientId), any())).thenReturn(
                 new PageImpl<>(List.of(), PageRequest.of(0, 10), 0)
@@ -70,6 +78,10 @@ class NotificationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty());
 
-        verify(notificationService).findAll(eq(patientId), any());
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(notificationService).findAll(eq(patientId), pageableCaptor.capture());
+        Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("createdAt");
+        assertThat(order).isNotNull();
+        assertThat(order.getDirection()).isEqualTo(Sort.Direction.DESC);
     }
 }

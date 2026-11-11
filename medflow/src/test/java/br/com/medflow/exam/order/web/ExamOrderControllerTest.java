@@ -5,6 +5,10 @@ import br.com.medflow.exam.order.application.dto.request.CreateExamResultRequest
 import br.com.medflow.exam.order.application.dto.request.UpdateExamStatusRequestDto;
 import br.com.medflow.exam.order.application.dto.response.ExamOrderResponseDto;
 import br.com.medflow.exam.order.application.dto.response.ExamResultResponseDto;
+import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundException;
+import br.com.medflow.exam.order.application.exception.ExamOrderStatusTransitionException;
+import br.com.medflow.exam.order.application.exception.ExamResultConflictException;
+import br.com.medflow.exam.order.application.exception.ExamResultNotFoundException;
 import br.com.medflow.exam.order.domain.enums.ExamPriority;
 import br.com.medflow.exam.order.domain.enums.ExamStatus;
 import br.com.medflow.shared.web.error.GlobalExceptionHandler;
@@ -146,5 +150,67 @@ class ExamOrderControllerTest {
                 .andExpect(jsonPath("$.resultText").value("Hemograma dentro da normalidade."));
 
         verify(examOrderService).findResultByOrderId(ORDER_ID);
+    }
+
+    @Test
+    void deveRetornar404QuandoAtualizarStatusDeOrdemInexistente() throws Exception {
+        UpdateExamStatusRequestDto request = new UpdateExamStatusRequestDto(ExamStatus.COLLECTED);
+        when(examOrderService.updateStatus(ORDER_ID, request))
+                .thenThrow(new ExamOrderNotFoundException(ORDER_ID));
+
+        mockMvc.perform(patch("/exam-orders/{id}/status", ORDER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "COLLECTED"
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("urn:medflow:problem:exam-order-not-found"));
+    }
+
+    @Test
+    void deveRetornar409QuandoTransicaoDeStatusForInvalida() throws Exception {
+        UpdateExamStatusRequestDto request = new UpdateExamStatusRequestDto(ExamStatus.RELEASED);
+        when(examOrderService.updateStatus(ORDER_ID, request))
+                .thenThrow(new ExamOrderStatusTransitionException(
+                        ORDER_ID, ExamStatus.AWAITING_COLLECTION, ExamStatus.RELEASED));
+
+        mockMvc.perform(patch("/exam-orders/{id}/status", ORDER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "RELEASED"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:medflow:problem:exam-order-status-transition-invalid"));
+    }
+
+    @Test
+    void deveRetornar409QuandoResultadoEstiverEmConflito() throws Exception {
+        CreateExamResultRequestDto request = new CreateExamResultRequestDto("Laudo repetido");
+        when(examOrderService.registerResult(ORDER_ID, request))
+                .thenThrow(new ExamResultConflictException(ORDER_ID, "a ordem já possui resultado liberado"));
+
+        mockMvc.perform(post("/exam-orders/{id}/result", ORDER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "resultText": "Laudo repetido"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:medflow:problem:exam-result-conflict"));
+    }
+
+    @Test
+    void deveRetornar404QuandoResultadoNaoExistir() throws Exception {
+        when(examOrderService.findResultByOrderId(ORDER_ID))
+                .thenThrow(new ExamResultNotFoundException(ORDER_ID));
+
+        mockMvc.perform(get("/exam-orders/{id}/result", ORDER_ID))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("urn:medflow:problem:exam-result-not-found"));
     }
 }

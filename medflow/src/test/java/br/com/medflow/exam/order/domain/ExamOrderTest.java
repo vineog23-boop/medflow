@@ -164,4 +164,28 @@ class ExamOrderTest {
         assertThatThrownBy(() -> examOrder.changeStatus(ExamStatus.PROCESSING))
                 .isInstanceOf(ExamOrderStatusTransitionException.class);
     }
+
+    @Test
+    void naoDeveAlterarStatusParaReceived() {
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
+        examOrder.acceptByLaboratory();
+
+        assertThatThrownBy(() -> examOrder.changeStatus(ExamStatus.RECEIVED))
+                .isInstanceOf(ExamOrderStatusTransitionException.class);
+    }
+
+    @Test
+    void naoDeveAlterarStatusQuandoOrdemEstiverRejeitadaOuCancelada() {
+        ExamOrder rejectedOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
+        rejectedOrder.changeStatus(ExamStatus.REJECTED);
+
+        assertThatThrownBy(() -> rejectedOrder.changeStatus(ExamStatus.PROCESSING))
+                .isInstanceOf(ExamOrderStatusTransitionException.class);
+
+        ExamOrder cancelledOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
+        cancelledOrder.changeStatus(ExamStatus.CANCELLED);
+
+        assertThatThrownBy(() -> cancelledOrder.changeStatus(ExamStatus.COLLECTED))
+                .isInstanceOf(ExamOrderStatusTransitionException.class);
+    }
 }

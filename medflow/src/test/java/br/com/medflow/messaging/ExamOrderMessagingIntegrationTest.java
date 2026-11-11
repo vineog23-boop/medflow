@@ -32,6 +32,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.time.LocalDate;
@@ -152,9 +153,11 @@ class ExamOrderMessagingIntegrationTest {
             }
             Page<NotificationResponseDto> notifications = notificationService.findAll(
                     patient.getId(),
-                    PageRequest.of(0, 10)
+                    PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))
             );
             assertThat(notifications.getTotalElements()).isEqualTo(2);
+            assertThat(notifications.getContent().get(0).status()).isEqualTo(ExamStatus.RELEASED);
+            assertThat(notifications.getContent().get(1).status()).isEqualTo(ExamStatus.COLLECTED);
         });
 
         // 7. Idempotência: reenviar o mesmo evento em exam-notifications.v1 não cria notificação duplicada

@@ -115,10 +115,10 @@ O Medflow precisa refletir com fidelidade os papéis reais entre o **Hospital** 
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| FLOW-01 | P1: Aceitar solicitação médica no Laboratório via Kafka | Specify | Pending |
-| FLOW-02 | P1: Evoluir etapas do exame pelo Laboratório (PATCH /status) | Specify | Pending |
-| FLOW-03 | P1: Entregar o resultado do exame (ExamResult) para o Paciente | Specify | Pending |
-| FLOW-04 | P1: Notificar o Paciente via Kafka e expor consulta de avisos | Specify | Pending |
+| FLOW-01 | P1: Aceitar solicitação médica no Laboratório via Kafka | Execute | Implementing |
+| FLOW-02 | P1: Evoluir etapas do exame pelo Laboratório (PATCH /status) | Execute | Implementing |
+| FLOW-03 | P1: Entregar o resultado do exame (ExamResult) para o Paciente | Execute | Implementing |
+| FLOW-04 | P1: Notificar o Paciente via Kafka e expor consulta de avisos | Execute | Implementing |
 
 ---
 
