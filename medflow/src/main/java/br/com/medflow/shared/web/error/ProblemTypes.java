@@ -20,6 +20,12 @@ public final class ProblemTypes {
             URI.create("urn:medflow:problem:exam-definition-code-conflict");
     public static final URI EXAM_DEFINITION_INACTIVE =
             URI.create("urn:medflow:problem:exam-definition-inactive");
+    public static final URI EXAM_ORDER_STATUS_TRANSITION_INVALID =
+            URI.create("urn:medflow:problem:exam-order-status-transition-invalid");
+    public static final URI EXAM_RESULT_NOT_FOUND =
+            URI.create("urn:medflow:problem:exam-result-not-found");
+    public static final URI EXAM_RESULT_CONFLICT =
+            URI.create("urn:medflow:problem:exam-result-conflict");
     public static final URI INVALID_REQUEST =
             URI.create("urn:medflow:problem:invalid-request");
     public static final URI VALIDATION_ERROR =

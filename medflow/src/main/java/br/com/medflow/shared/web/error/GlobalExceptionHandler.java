@@ -4,6 +4,9 @@ import br.com.medflow.exam.definition.application.exception.ExamDefinitionCodeCo
 import br.com.medflow.exam.definition.application.exception.ExamDefinitionInactiveException;
 import br.com.medflow.exam.definition.application.exception.ExamDefinitionNotFoundException;
 import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundException;
+import br.com.medflow.exam.order.application.exception.ExamOrderStatusTransitionException;
+import br.com.medflow.exam.order.application.exception.ExamResultConflictException;
+import br.com.medflow.exam.order.application.exception.ExamResultNotFoundException;
 import br.com.medflow.patient.application.exception.PatientNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -106,6 +109,45 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.CONFLICT,
                 ProblemTypes.EXAM_DEFINITION_INACTIVE,
                 "Definição de exame inativa",
+                exception.getMessage(),
+                URI.create(request.getRequestURI())
+        );
+    }
+
+    @ExceptionHandler(ExamOrderStatusTransitionException.class)
+    public ResponseEntity<ProblemDetail> handleExamOrderStatusTransition(
+            ExamOrderStatusTransitionException exception,
+            HttpServletRequest request) {
+        return createResponse(
+                HttpStatus.CONFLICT,
+                ProblemTypes.EXAM_ORDER_STATUS_TRANSITION_INVALID,
+                "Transição de status inválida",
+                exception.getMessage(),
+                URI.create(request.getRequestURI())
+        );
+    }
+
+    @ExceptionHandler(ExamResultNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleExamResultNotFound(
+            ExamResultNotFoundException exception,
+            HttpServletRequest request) {
+        return createResponse(
+                HttpStatus.NOT_FOUND,
+                ProblemTypes.EXAM_RESULT_NOT_FOUND,
+                "Resultado de exame não encontrado",
+                exception.getMessage(),
+                URI.create(request.getRequestURI())
+        );
+    }
+
+    @ExceptionHandler(ExamResultConflictException.class)
+    public ResponseEntity<ProblemDetail> handleExamResultConflict(
+            ExamResultConflictException exception,
+            HttpServletRequest request) {
+        return createResponse(
+                HttpStatus.CONFLICT,
+                ProblemTypes.EXAM_RESULT_CONFLICT,
+                "Conflito ao registrar resultado de exame",
                 exception.getMessage(),
                 URI.create(request.getRequestURI())
         );

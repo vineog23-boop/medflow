@@ -5,12 +5,20 @@ import br.com.medflow.exam.definition.application.exception.ExamDefinitionNotFou
 import br.com.medflow.exam.definition.domain.ExamDefinition;
 import br.com.medflow.exam.definition.persistence.ExamDefinitionRepository;
 import br.com.medflow.exam.order.application.dto.request.CreateExamRequestDto;
+import br.com.medflow.exam.order.application.dto.request.CreateExamResultRequestDto;
 import br.com.medflow.exam.order.application.dto.request.UpdateExamRequestDto;
+import br.com.medflow.exam.order.application.dto.request.UpdateExamStatusRequestDto;
 import br.com.medflow.exam.order.application.dto.response.ExamOrderResponseDto;
+import br.com.medflow.exam.order.application.dto.response.ExamResultResponseDto;
 import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundException;
+import br.com.medflow.exam.order.application.exception.ExamResultConflictException;
+import br.com.medflow.exam.order.application.exception.ExamResultNotFoundException;
 import br.com.medflow.exam.order.domain.ExamOrder;
+import br.com.medflow.exam.order.domain.ExamResult;
+import br.com.medflow.exam.order.domain.event.ExamLaboratoryUpdatedEvent;
 import br.com.medflow.exam.order.domain.event.ExamOrderCreatedEvent;
 import br.com.medflow.exam.order.persistence.ExamOrderRepository;
+import br.com.medflow.exam.order.persistence.ExamResultRepository;
 import br.com.medflow.messaging.outbox.domain.OutboxEvent;
 import br.com.medflow.messaging.outbox.persistence.OutboxEventRepository;
 import br.com.medflow.patient.application.exception.PatientNotFoundException;
@@ -30,6 +38,7 @@ public class ExamOrderService {
     private final ExamOrderRepository examOrderRepository;
     private final PatientRepository patientRepository;
     private final ExamDefinitionRepository examDefinitionRepository;
+    private final ExamResultRepository examResultRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
 
@@ -37,11 +46,13 @@ public class ExamOrderService {
             ExamOrderRepository examOrderRepository,
             PatientRepository patientRepository,
             ExamDefinitionRepository examDefinitionRepository,
+            ExamResultRepository examResultRepository,
             OutboxEventRepository outboxEventRepository,
             ObjectMapper objectMapper) {
         this.examOrderRepository = examOrderRepository;
         this.patientRepository = patientRepository;
         this.examDefinitionRepository = examDefinitionRepository;
+        this.examResultRepository = examResultRepository;
         this.outboxEventRepository = outboxEventRepository;
         this.objectMapper = objectMapper;
     }
@@ -103,24 +114,82 @@ public class ExamOrderService {
         examOrderRepository.delete(examOrder);
     }
 
+    /**
+     * Evolui a etapa do exame no laboratório e registra evento de notificação na Outbox.
+     */
+    @Transactional
+    public ExamOrderResponseDto updateStatus(UUID id, UpdateExamStatusRequestDto request) {
+        ExamOrder examOrder = examOrderRepository.findById(id)
+                .orElseThrow(() -> new ExamOrderNotFoundException(id));
+
+        examOrder.changeStatus(request.status());
+        ExamOrder savedExamOrder = examOrderRepository.save(examOrder);
+        salvarEventoLaboratorioOutbox(savedExamOrder);
+
+        return new ExamOrderResponseDto(savedExamOrder);
+    }
+
+    /**
+     * Registra o laudo clínico do paciente na tabela exam_results, marca a ordem como RELEASED
+     * e grava evento na Outbox na mesma transação.
+     */
+    @Transactional
+    public ExamResultResponseDto registerResult(UUID id, CreateExamResultRequestDto request) {
+        ExamOrder examOrder = examOrderRepository.findById(id)
+                .orElseThrow(() -> new ExamOrderNotFoundException(id));
+
+        if (examOrder.isTerminalStatus() || examResultRepository.existsByOrderId(id)) {
+            throw new ExamResultConflictException(id, "a ordem já possui resultado liberado ou foi encerrada");
+        }
+
+        ExamResult examResult = new ExamResult(
+                examOrder.getId(),
+                examOrder.getPatientId(),
+                examOrder.getExamCode(),
+                request.resultText()
+        );
+        ExamResult savedResult = examResultRepository.save(examResult);
+
+        examOrder.markReleased();
+        ExamOrder savedOrder = examOrderRepository.save(examOrder);
+        salvarEventoLaboratorioOutbox(savedOrder);
+
+        return new ExamResultResponseDto(savedResult);
+    }
+
+    public ExamResultResponseDto findResultByOrderId(UUID id) {
+        ExamResult examResult = examResultRepository.findByOrderId(id)
+                .orElseThrow(() -> new ExamResultNotFoundException(id));
+
+        return new ExamResultResponseDto(examResult);
+    }
+
+    private void salvarEventoLaboratorioOutbox(ExamOrder order) {
+        ExamLaboratoryUpdatedEvent event = new ExamLaboratoryUpdatedEvent(order);
+        saveOutboxRecord(event.eventId(), "LABORATORY_UPDATE", order.getId(), "ExamLaboratoryUpdatedEvent", event);
+    }
+
     private void salvarEventoOutbox(ExamOrder order) {
-        // Cria o evento a partir do pedido salvo, igual você faz no new ExamOrderResponseDto(order)
         ExamOrderCreatedEvent event = new ExamOrderCreatedEvent(order);
+        saveOutboxRecord(event.eventId(), "EXAM_ORDER", order.getId(), "ExamOrderCreatedEvent", event);
+    }
 
+    private void saveOutboxRecord(
+            UUID eventId,
+            String aggregateType,
+            UUID aggregateId,
+            String eventType,
+            Object payloadObject) {
         try {
-            // Converte o evento para JSON
-            String jsonPayload = objectMapper.writeValueAsString(event);
-
-            // Cria o registro da tabela outbox e salva
+            String jsonPayload = objectMapper.writeValueAsString(payloadObject);
             OutboxEvent outboxEvent = new OutboxEvent(
-                    event.eventId(),
-                    "EXAM_ORDER",
-                    order.getId(),
-                    "ExamOrderCreatedEvent",
+                    eventId,
+                    aggregateType,
+                    aggregateId,
+                    eventType,
                     jsonPayload
             );
             outboxEventRepository.save(outboxEvent);
-
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Erro ao converter evento de exame para JSON", e);
         }

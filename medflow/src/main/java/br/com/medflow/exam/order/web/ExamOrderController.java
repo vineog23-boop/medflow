@@ -2,8 +2,11 @@ package br.com.medflow.exam.order.web;
 
 import br.com.medflow.exam.order.application.ExamOrderService;
 import br.com.medflow.exam.order.application.dto.request.CreateExamRequestDto;
-import br.com.medflow.exam.order.application.dto.response.ExamOrderResponseDto;
+import br.com.medflow.exam.order.application.dto.request.CreateExamResultRequestDto;
 import br.com.medflow.exam.order.application.dto.request.UpdateExamRequestDto;
+import br.com.medflow.exam.order.application.dto.request.UpdateExamStatusRequestDto;
+import br.com.medflow.exam.order.application.dto.response.ExamOrderResponseDto;
+import br.com.medflow.exam.order.application.dto.response.ExamResultResponseDto;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +14,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -66,5 +70,29 @@ public class ExamOrderController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         examOrderService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ExamOrderResponseDto> updateStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateExamStatusRequestDto request) {
+
+        ExamOrderResponseDto response = examOrderService.updateStatus(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/result")
+    public ResponseEntity<ExamResultResponseDto> registerResult(
+            @PathVariable UUID id,
+            @Valid @RequestBody CreateExamResultRequestDto request) {
+
+        ExamResultResponseDto response = examOrderService.registerResult(id, request);
+        return ResponseEntity.status(201).body(response);
+    }
+
+    @GetMapping("/{id}/result")
+    public ResponseEntity<ExamResultResponseDto> findResult(@PathVariable UUID id) {
+        ExamResultResponseDto response = examOrderService.findResultByOrderId(id);
+        return ResponseEntity.ok(response);
     }
 }

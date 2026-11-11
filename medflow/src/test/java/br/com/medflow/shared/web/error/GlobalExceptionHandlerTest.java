@@ -4,6 +4,10 @@ import br.com.medflow.exam.definition.application.exception.ExamDefinitionCodeCo
 import br.com.medflow.exam.definition.application.exception.ExamDefinitionInactiveException;
 import br.com.medflow.exam.definition.application.exception.ExamDefinitionNotFoundException;
 import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundException;
+import br.com.medflow.exam.order.application.exception.ExamOrderStatusTransitionException;
+import br.com.medflow.exam.order.application.exception.ExamResultConflictException;
+import br.com.medflow.exam.order.application.exception.ExamResultNotFoundException;
+import br.com.medflow.exam.order.domain.enums.ExamStatus;
 import br.com.medflow.patient.application.dto.PatientDtoRequest;
 import br.com.medflow.patient.application.exception.PatientNotFoundException;
 import jakarta.validation.Valid;
@@ -127,6 +131,45 @@ class GlobalExceptionHandlerTest {
                         "Definição de exame inativa: HEMOGRAMA"))
                 .andExpect(jsonPath("$.instance").value(
                         "/test-errors/exam-definitions/inactive/HEMOGRAMA"));
+    }
+
+    @Test
+    void shouldReturnProblemDetailWhenExamOrderStatusTransitionIsInvalid() throws Exception {
+        mockMvc.perform(get("/test-errors/exam-orders/{id}/status-conflict", ID))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type")
+                        .value("urn:medflow:problem:exam-order-status-transition-invalid"))
+                .andExpect(jsonPath("$.title").value("Transição de status inválida"))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.instance").value(
+                        "/test-errors/exam-orders/" + ID + "/status-conflict"));
+    }
+
+    @Test
+    void shouldReturnProblemDetailWhenExamResultDoesNotExist() throws Exception {
+        mockMvc.perform(get("/test-errors/exam-orders/{id}/result-missing", ID))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type")
+                        .value("urn:medflow:problem:exam-result-not-found"))
+                .andExpect(jsonPath("$.title").value("Resultado de exame não encontrado"))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.instance").value(
+                        "/test-errors/exam-orders/" + ID + "/result-missing"));
+    }
+
+    @Test
+    void shouldReturnProblemDetailWhenExamResultConflicts() throws Exception {
+        mockMvc.perform(get("/test-errors/exam-orders/{id}/result-conflict", ID))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.type")
+                        .value("urn:medflow:problem:exam-result-conflict"))
+                .andExpect(jsonPath("$.title").value("Conflito ao registrar resultado de exame"))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.instance").value(
+                        "/test-errors/exam-orders/" + ID + "/result-conflict"));
     }
 
     @Test
@@ -259,6 +302,21 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/exam-definitions/inactive/{code}")
         void examDefinitionInactive(@PathVariable String code) {
             throw new ExamDefinitionInactiveException(code);
+        }
+
+        @GetMapping("/exam-orders/{id}/status-conflict")
+        void examOrderStatusConflict(@PathVariable UUID id) {
+            throw new ExamOrderStatusTransitionException(id, ExamStatus.AWAITING_COLLECTION, ExamStatus.RELEASED);
+        }
+
+        @GetMapping("/exam-orders/{id}/result-missing")
+        void examResultMissing(@PathVariable UUID id) {
+            throw new ExamResultNotFoundException(id);
+        }
+
+        @GetMapping("/exam-orders/{id}/result-conflict")
+        void examResultConflict(@PathVariable UUID id) {
+            throw new ExamResultConflictException(id, "laudo já cadastrado");
         }
 
         @PostMapping("/validation")

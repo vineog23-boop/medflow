@@ -1,17 +1,26 @@
 package br.com.medflow.exam.order.application;
 
 import br.com.medflow.exam.order.application.dto.request.CreateExamRequestDto;
+import br.com.medflow.exam.order.application.dto.request.CreateExamResultRequestDto;
 import br.com.medflow.exam.order.application.dto.response.ExamOrderResponseDto;
+import br.com.medflow.exam.order.application.dto.response.ExamResultResponseDto;
 import br.com.medflow.exam.order.application.dto.request.UpdateExamRequestDto;
+import br.com.medflow.exam.order.application.dto.request.UpdateExamStatusRequestDto;
 import br.com.medflow.exam.definition.application.exception.ExamDefinitionNotFoundException;
 import br.com.medflow.exam.definition.application.exception.ExamDefinitionInactiveException;
 import br.com.medflow.exam.definition.domain.ExamDefinition;
 import br.com.medflow.exam.definition.domain.enums.SampleType;
 import br.com.medflow.exam.definition.persistence.ExamDefinitionRepository;
 import br.com.medflow.exam.order.application.exception.ExamOrderNotFoundException;
+import br.com.medflow.exam.order.application.exception.ExamOrderStatusTransitionException;
+import br.com.medflow.exam.order.application.exception.ExamResultConflictException;
+import br.com.medflow.exam.order.application.exception.ExamResultNotFoundException;
 import br.com.medflow.exam.order.domain.ExamOrder;
+import br.com.medflow.exam.order.domain.ExamResult;
 import br.com.medflow.exam.order.domain.enums.ExamPriority;
+import br.com.medflow.exam.order.domain.enums.ExamStatus;
 import br.com.medflow.exam.order.persistence.ExamOrderRepository;
+import br.com.medflow.exam.order.persistence.ExamResultRepository;
 import br.com.medflow.patient.application.exception.PatientNotFoundException;
 import br.com.medflow.patient.persistence.PatientRepository;
 import org.junit.jupiter.api.Test;
@@ -43,12 +52,14 @@ class ExamOrderServiceTest {
     private final ExamOrderRepository repository = mock(ExamOrderRepository.class);
     private final PatientRepository patientRepository = mock(PatientRepository.class);
     private final ExamDefinitionRepository examDefinitionRepository = mock(ExamDefinitionRepository.class);
+    private final ExamResultRepository examResultRepository = mock(ExamResultRepository.class);
     private final OutboxEventRepository outboxEventRepository = mock(OutboxEventRepository.class);
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     private final ExamOrderService service = new ExamOrderService(
             repository,
             patientRepository,
             examDefinitionRepository,
+            examResultRepository,
             outboxEventRepository,
             objectMapper
     );
@@ -300,6 +311,100 @@ class ExamOrderServiceTest {
                 .isInstanceOf(ExamOrderNotFoundException.class);
 
         verify(repository, never()).delete(any(ExamOrder.class));
+    }
+
+    @Test
+    void deveEvoluirStatusOperacionalERegistrarEventoOutbox() {
+        UUID id = UUID.randomUUID();
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.URGENT);
+        org.springframework.test.util.ReflectionTestUtils.setField(examOrder, "id", id);
+        when(repository.findById(id)).thenReturn(Optional.of(examOrder));
+        when(repository.save(examOrder)).thenReturn(examOrder);
+
+        ExamOrderResponseDto result = service.updateStatus(id, new UpdateExamStatusRequestDto(ExamStatus.COLLECTED));
+
+        assertThat(result.status()).isEqualTo(ExamStatus.COLLECTED);
+        ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxEventRepository).save(outboxCaptor.capture());
+        OutboxEvent savedOutbox = outboxCaptor.getValue();
+        assertThat(savedOutbox.getAggregateType()).isEqualTo("LABORATORY_UPDATE");
+        assertThat(savedOutbox.getEventType()).isEqualTo("ExamLaboratoryUpdatedEvent");
+        assertThat(savedOutbox.getPayload()).contains("COLLECTED");
+    }
+
+    @Test
+    void naoDeveAlterarStatusDiretamenteParaReleasedSemLaudo() {
+        UUID id = UUID.randomUUID();
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
+        org.springframework.test.util.ReflectionTestUtils.setField(examOrder, "id", id);
+        when(repository.findById(id)).thenReturn(Optional.of(examOrder));
+
+        assertThatThrownBy(() -> service.updateStatus(id, new UpdateExamStatusRequestDto(ExamStatus.RELEASED)))
+                .isInstanceOf(ExamOrderStatusTransitionException.class);
+
+        verify(repository, never()).save(any(ExamOrder.class));
+        verify(outboxEventRepository, never()).save(any(OutboxEvent.class));
+    }
+
+    @Test
+    void deveRegistrarResultadoLiberarOrdemEGravarOutbox() {
+        UUID id = UUID.randomUUID();
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.URGENT);
+        org.springframework.test.util.ReflectionTestUtils.setField(examOrder, "id", id);
+        when(repository.findById(id)).thenReturn(Optional.of(examOrder));
+        when(examResultRepository.existsByOrderId(id)).thenReturn(false);
+        when(examResultRepository.save(any(ExamResult.class))).thenAnswer(inv -> {
+            ExamResult r = inv.getArgument(0);
+            org.springframework.test.util.ReflectionTestUtils.setField(r, "id", UUID.randomUUID());
+            return r;
+        });
+        when(repository.save(examOrder)).thenReturn(examOrder);
+
+        ExamResultResponseDto result = service.registerResult(id, new CreateExamResultRequestDto("Hemácias normais"));
+
+        assertThat(result.orderId()).isEqualTo(id);
+        assertThat(result.resultText()).isEqualTo("Hemácias normais");
+        assertThat(examOrder.getStatus()).isEqualTo(ExamStatus.RELEASED);
+
+        ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxEventRepository).save(outboxCaptor.capture());
+        assertThat(outboxCaptor.getValue().getEventType()).isEqualTo("ExamLaboratoryUpdatedEvent");
+        assertThat(outboxCaptor.getValue().getPayload()).contains("RELEASED");
+    }
+
+    @Test
+    void naoDeveRegistrarResultadoQuandoOrdemJaPossuirResultadoOuEstiverEncerrada() {
+        UUID id = UUID.randomUUID();
+        ExamOrder examOrder = new ExamOrder(UUID.randomUUID(), "HEMOGRAMA", ExamPriority.NORMAL);
+        org.springframework.test.util.ReflectionTestUtils.setField(examOrder, "id", id);
+        when(repository.findById(id)).thenReturn(Optional.of(examOrder));
+        when(examResultRepository.existsByOrderId(id)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.registerResult(id, new CreateExamResultRequestDto("Laudo duplicado")))
+                .isInstanceOf(ExamResultConflictException.class);
+
+        verify(examResultRepository, never()).save(any(ExamResult.class));
+    }
+
+    @Test
+    void deveBuscarResultadoPorOrdemId() {
+        UUID orderId = UUID.randomUUID();
+        ExamResult examResult = new ExamResult(orderId, UUID.randomUUID(), "HEMOGRAMA", "Valores normais");
+        when(examResultRepository.findByOrderId(orderId)).thenReturn(Optional.of(examResult));
+
+        ExamResultResponseDto response = service.findResultByOrderId(orderId);
+
+        assertThat(response.orderId()).isEqualTo(orderId);
+        assertThat(response.resultText()).isEqualTo("Valores normais");
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoResultadoNaoExistir() {
+        UUID orderId = UUID.randomUUID();
+        when(examResultRepository.findByOrderId(orderId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findResultByOrderId(orderId))
+                .isInstanceOf(ExamResultNotFoundException.class);
     }
 
     private ExamDefinition criarDefinicao() {
