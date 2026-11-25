@@ -9,6 +9,7 @@
   <img src="https://img.shields.io/badge/Flyway-DB-CC0200?style=for-the-badge&logo=flyway&logoColor=white" alt="Flyway Migration">
   <img src="https://img.shields.io/badge/Docker_Compose-Infrastructure-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Compose">
   <img src="https://img.shields.io/badge/Status-Em_desenvolvimento-F59E0B?style=for-the-badge" alt="Status: Em desenvolvimento">
+  <a href="https://github.com/vineog23-boop/medflow/actions/workflows/ci.yml"><img src="https://github.com/vineog23-boop/medflow/actions/workflows/ci.yml/badge.svg" alt="CI: build e testes"></a>
 </p>
 
 <p align="center">
