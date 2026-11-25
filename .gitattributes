@@ -1,0 +1,7 @@
+# A estatistica de linguagem do repositorio deve refletir a aplicacao,
+# nao os artefatos de apoio.
+
+docs/**     linguist-documentation
+.specs/**   linguist-documentation
+output/**   linguist-generated
+tmp/**      linguist-generated
